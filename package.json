@@ -6,5 +6,8 @@
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-degrees.mjs"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.0"
   }
 }

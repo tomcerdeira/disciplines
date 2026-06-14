@@ -9,8 +9,9 @@ A generic adapter can concatenate:
 1. The selected degree markdown body.
 2. A short list of included skill ids.
 3. A short list of recommended tools, grouped by kind.
-4. A soft-exclusion note.
-5. A reminder that excluded skills may be loaded with explicit user request or concrete evidence.
+4. A short explanation of matched activation signals when useful.
+5. A soft-exclusion note.
+6. A reminder that excluded skills may be loaded with explicit user request or concrete evidence.
 
 This works even when the agent runtime has no formal skill system.
 
@@ -38,8 +39,22 @@ A future resolver can produce a small bundle:
 
 ```json
 {
-  "degreeId": "frontend-engineer",
-  "confidence": 0.78,
+  "decision": "select",
+  "selectedDegrees": [
+    {
+      "id": "frontend-engineer",
+      "role": "primary",
+      "confidence": 0.78
+    }
+  ],
+  "activationMatches": [
+    {
+      "degreeId": "frontend-engineer",
+      "pathPatterns": ["**/*.tsx"],
+      "commandPatterns": [],
+      "promptSignals": ["TSX files", "layout", "accessibility"]
+    }
+  ],
   "includeSkills": ["react-best-practices", "frontend-design", "browser-verification"],
   "recommendedTools": [
     {

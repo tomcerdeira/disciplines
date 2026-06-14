@@ -152,31 +152,55 @@ recommendedTools:
     purpose: Inspect pull requests, CI status, issues, and GitHub metadata when available.
 ```
 
-## Write Useful `activationHints`
+## Write Useful `activation`
 
-Activation hints should describe concrete evidence that this degree fits a task.
+Activation signals should describe concrete evidence that this degree fits a task. Use structured fields so resolvers can match paths, commands, and prompt language without guessing from prose.
 
-Good hints:
-
-```yaml
-activationHints:
-  - React components
-  - TSX or JSX files
-  - accessibility, ARIA, keyboard navigation, or focus management
-  - browser screenshots or visual verification
-```
-
-Weak hints:
+Good activation:
 
 ```yaml
-activationHints:
-  - code
-  - bug
-  - improve things
-  - make it better
+activation:
+  pathPatterns:
+    - "**/*.tsx"
+    - "**/*.jsx"
+    - "src/components/**"
+  commandPatterns:
+    - "\\bplaywright\\b"
+  promptSignals:
+    phrases:
+      - React components
+      - TSX files
+      - accessibility
+      - keyboard navigation
+    allOf:
+      - [browser, verify]
+    anyOf:
+      - ARIA
+      - focus management
+    noneOf:
+      - database migration
+  minScore: 6.5
 ```
 
-Prefer hints that mention:
+Weak activation:
+
+```yaml
+activation:
+  pathPatterns: []
+  commandPatterns: []
+  promptSignals:
+    phrases:
+      - code
+      - bug
+      - improve things
+      - make it better
+    allOf: []
+    anyOf: []
+    noneOf: []
+  minScore: 1
+```
+
+Prefer activation signals that mention:
 
 - file types
 - frameworks
@@ -184,6 +208,8 @@ Prefer hints that mention:
 - user-visible task language
 - tools or evidence sources
 - domain-specific nouns
+
+Use `pathPatterns` for repo evidence, `commandPatterns` for shell/tool evidence, `promptSignals` for user language, and `minScore` for resolver selection guidance.
 
 ## Set `confidenceThreshold`
 
@@ -231,7 +257,7 @@ A degree should usually have:
 - 3 to 7 included skills
 - 2 to 6 soft exclusions
 - 2 to 5 recommended tools
-- 4 to 8 activation hints
+- 4 to 12 concrete activation signals across paths, commands, and prompt phrases
 - 2 to 4 short focus-prompt paragraphs
 
 These are review guidelines, not schema limits.
@@ -252,6 +278,6 @@ Then check:
 - Included skills are relevant to the initial context.
 - Soft exclusions are advisory and overrideable.
 - Recommended tools explain purpose and do not assume availability.
-- Activation hints are concrete.
+- Activation signals are concrete and structured.
 - The focus prompt is short enough to fit into an agent context bundle.
 - The degree does not duplicate another degree's purpose.

@@ -40,7 +40,7 @@ The resolver should look for evidence in this order:
 
 1. Explicit user intent, such as "use the frontend degree" or "treat this as automation work".
 2. Direct task evidence, such as file paths, extensions, commands, tools, frameworks, or artifact types.
-3. Degree `activationHints`.
+3. Degree `activation` signals, including `pathPatterns`, `commandPatterns`, and `promptSignals`.
 4. Repo signals, such as changed files, package names, route names, tests, logs, or schemas.
 5. General domain language, such as "layout", "endpoint", "CSV", "workflow", or "PRD".
 
@@ -94,6 +94,14 @@ A resolver should emit a compact bundle:
       "role": "primary",
       "confidence": 0.84,
       "reason": "Task mentions a TSX file, keyboard navigation, and browser verification."
+    }
+  ],
+  "activationMatches": [
+    {
+      "degreeId": "frontend-engineer",
+      "pathPatterns": ["**/*.tsx"],
+      "commandPatterns": [],
+      "promptSignals": ["TSX files", "keyboard navigation", "browser verification"]
     }
   ],
   "includeSkills": [

@@ -25,12 +25,37 @@ recommendedTools:
   - id: playwright
     kind: cli
     purpose: Run browser-level tests and targeted UI flows when available.
-activationHints:
-  - React components
-  - TSX or JSX files
-  - layout, styling, or responsive behavior
-  - accessibility, ARIA, keyboard navigation, or focus management
-  - browser screenshots or visual verification
+activation:
+  pathPatterns:
+    - "**/*.tsx"
+    - "**/*.jsx"
+    - "src/components/**"
+    - "app/**/page.tsx"
+    - "app/**/layout.tsx"
+  commandPatterns:
+    - "\\b(npm|pnpm|bun|yarn)\\s+run\\s+(dev|build|lint|test)\\b"
+    - "\\bplaywright\\b"
+  promptSignals:
+    phrases:
+      - React components
+      - TSX files
+      - layout
+      - styling
+      - accessibility
+      - keyboard navigation
+      - browser verification
+    allOf:
+      - [browser, verify]
+      - [responsive, layout]
+    anyOf:
+      - JSX
+      - ARIA
+      - focus management
+      - visual regression
+    noneOf:
+      - database migration
+      - backend endpoint
+  minScore: 6.5
 aliases:
   - ui-engineer
   - frontend

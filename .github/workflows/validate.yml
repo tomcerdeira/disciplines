@@ -6,7 +6,7 @@ on:
 
 jobs:
   degrees:
-    name: Validate degree files
+    name: Validate degree packages
     runs-on: ubuntu-latest
 
     steps:
@@ -17,6 +17,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Validate degrees
         run: npm run validate

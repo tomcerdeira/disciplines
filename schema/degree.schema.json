@@ -13,7 +13,7 @@
     "includeSkills",
     "softExcludeSkills",
     "recommendedTools",
-    "activationHints"
+    "activation"
   ],
   "properties": {
     "id": {
@@ -63,15 +63,9 @@
       },
       "default": []
     },
-    "activationHints": {
-      "type": "array",
-      "description": "Natural-language hints, file patterns, tools, or domain phrases that suggest this degree is relevant.",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      },
-      "uniqueItems": true,
-      "minItems": 1
+    "activation": {
+      "$ref": "#/$defs/activation",
+      "description": "Structured task, file, command, and prompt signals that suggest this degree is relevant."
     },
     "aliases": {
       "type": "array",
@@ -131,6 +125,93 @@
           "type": "boolean",
           "description": "Whether the tool is helpful but not expected to be available.",
           "default": true
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pathPatterns", "commandPatterns", "promptSignals", "minScore"],
+      "properties": {
+        "pathPatterns": {
+          "type": "array",
+          "description": "Glob-like file path patterns that suggest this degree is relevant.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "commandPatterns": {
+          "type": "array",
+          "description": "Regular expression strings for shell commands or tool invocations that suggest this degree is relevant.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "promptSignals": {
+          "$ref": "#/$defs/promptSignals"
+        },
+        "minScore": {
+          "type": "number",
+          "description": "Advisory minimum score for automatic selection in resolver implementations.",
+          "minimum": 0,
+          "default": 6
+        }
+      }
+    },
+    "promptSignals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phrases", "allOf", "anyOf", "noneOf"],
+      "properties": {
+        "phrases": {
+          "type": "array",
+          "description": "Phrases that are strong prompt-level hints for this degree.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "allOf": {
+          "type": "array",
+          "description": "Phrase groups where every phrase in a group should appear for that group to match.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "default": []
+        },
+        "anyOf": {
+          "type": "array",
+          "description": "Phrases where any one match is useful supporting evidence.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "noneOf": {
+          "type": "array",
+          "description": "Phrases that reduce confidence when present.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "default": []
         }
       }
     }

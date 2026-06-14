@@ -3,6 +3,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import YAML from "yaml";
 
 const root = process.cwd();
 const schemaPath = path.join(root, "schema", "degree.schema.json");
@@ -12,123 +13,6 @@ const errors = [];
 
 function fail(message) {
   errors.push(message);
-}
-
-function parseScalar(value) {
-  const trimmed = value.trim();
-
-  if (trimmed === "true") return true;
-  if (trimmed === "false") return false;
-  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) return Number(trimmed);
-
-  const quoted = trimmed.match(/^(['"])(.*)\1$/);
-  if (quoted) return quoted[2];
-
-  return trimmed;
-}
-
-function parseInlineKeyValue(line) {
-  const index = line.indexOf(":");
-  if (index === -1) return null;
-
-  const key = line.slice(0, index).trim();
-  const rawValue = line.slice(index + 1).trim();
-  if (!key) return null;
-
-  return [key, rawValue === "" ? undefined : parseScalar(rawValue)];
-}
-
-function parseFrontmatterYaml(source, filePath) {
-  const data = {};
-  const lines = source.split(/\r?\n/);
-  let index = 0;
-
-  while (index < lines.length) {
-    const line = lines[index];
-
-    if (line.trim() === "" || line.trim().startsWith("#")) {
-      index += 1;
-      continue;
-    }
-
-    if (/^\s/.test(line)) {
-      fail(`${filePath}: unexpected indented top-level line: ${line}`);
-      index += 1;
-      continue;
-    }
-
-    const pair = parseInlineKeyValue(line);
-    if (!pair) {
-      fail(`${filePath}: expected key/value line: ${line}`);
-      index += 1;
-      continue;
-    }
-
-    const [key, value] = pair;
-
-    if (value !== undefined) {
-      data[key] = value;
-      index += 1;
-      continue;
-    }
-
-    const items = [];
-    index += 1;
-
-    while (index < lines.length) {
-      const itemLine = lines[index];
-
-      if (itemLine.trim() === "" || itemLine.trim().startsWith("#")) {
-        index += 1;
-        continue;
-      }
-
-      if (!itemLine.startsWith("  - ")) break;
-
-      const firstItem = itemLine.slice(4);
-      const objectPair = parseInlineKeyValue(firstItem);
-
-      if (objectPair) {
-        const object = {};
-        object[objectPair[0]] = objectPair[1] ?? "";
-        index += 1;
-
-        while (index < lines.length) {
-          const nestedLine = lines[index];
-          if (nestedLine.trim() === "" || nestedLine.trim().startsWith("#")) {
-            index += 1;
-            continue;
-          }
-          if (!nestedLine.startsWith("    ")) break;
-          if (nestedLine.startsWith("    - ")) {
-            fail(`${filePath}: nested arrays are not supported: ${nestedLine}`);
-            index += 1;
-            continue;
-          }
-
-          const nestedPair = parseInlineKeyValue(nestedLine.trim());
-          if (!nestedPair) {
-            fail(`${filePath}: expected nested key/value line: ${nestedLine}`);
-            index += 1;
-            continue;
-          }
-
-          object[nestedPair[0]] = nestedPair[1] ?? "";
-          index += 1;
-        }
-
-        items.push(object);
-        continue;
-      }
-
-      items.push(parseScalar(firstItem));
-      index += 1;
-    }
-
-    data[key] = items;
-  }
-
-  return data;
 }
 
 function splitDegreeFile(source, filePath) {
@@ -150,6 +34,20 @@ function splitDegreeFile(source, filePath) {
   if (!body) fail(`${filePath}: empty markdown body`);
 
   return { frontmatter, body };
+}
+
+function parseFrontmatterYaml(source, filePath) {
+  try {
+    const data = YAML.parse(source);
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      fail(`${filePath}: frontmatter must be a YAML object`);
+      return {};
+    }
+    return data;
+  } catch (error) {
+    fail(`${filePath}: invalid YAML frontmatter: ${error.message}`);
+    return {};
+  }
 }
 
 function expectString(data, key, filePath) {
@@ -198,7 +96,6 @@ function validateDegree(data, filePath, schema, seenIds) {
   expectString(data, "description", filePath);
   expectStringArray(data, "includeSkills", filePath);
   expectStringArray(data, "softExcludeSkills", filePath, { allowEmpty: true });
-  expectStringArray(data, "activationHints", filePath);
 
   if ("aliases" in data) expectStringArray(data, "aliases", filePath, { allowEmpty: true });
   if ("notes" in data) expectString(data, "notes", filePath);
@@ -235,6 +132,7 @@ function validateDegree(data, filePath, schema, seenIds) {
   }
 
   validateRecommendedTools(data.recommendedTools, filePath, schema);
+  validateActivation(data.activation, filePath);
 }
 
 function validateRecommendedTools(tools, filePath, schema) {
@@ -287,6 +185,82 @@ function validateRecommendedTools(tools, filePath, schema) {
     if (typeof tool.id === "string") {
       if (seen.has(tool.id)) fail(`${filePath}: duplicate recommended tool id ${tool.id}`);
       seen.add(tool.id);
+    }
+  });
+}
+
+function validateActivation(activation, filePath) {
+  if (!activation || typeof activation !== "object" || Array.isArray(activation)) {
+    fail(`${filePath}: activation must be an object`);
+    return;
+  }
+
+  const allowedKeys = new Set(["pathPatterns", "commandPatterns", "promptSignals", "minScore"]);
+  for (const key of Object.keys(activation)) {
+    if (!allowedKeys.has(key)) fail(`${filePath}: activation has unknown field ${key}`);
+  }
+
+  expectStringArray(activation, "pathPatterns", `${filePath}: activation`, { allowEmpty: true });
+  expectStringArray(activation, "commandPatterns", `${filePath}: activation`, { allowEmpty: true });
+
+  if (!("promptSignals" in activation)) {
+    fail(`${filePath}: activation missing promptSignals`);
+  } else {
+    validatePromptSignals(activation.promptSignals, filePath);
+  }
+
+  if (!("minScore" in activation)) {
+    fail(`${filePath}: activation missing minScore`);
+  } else if (typeof activation.minScore !== "number" || activation.minScore < 0) {
+    fail(`${filePath}: activation.minScore must be a number greater than or equal to 0`);
+  }
+
+  if (Array.isArray(activation.commandPatterns)) {
+    activation.commandPatterns.forEach((pattern, index) => {
+      if (typeof pattern !== "string") return;
+      try {
+        new RegExp(pattern);
+      } catch (error) {
+        fail(`${filePath}: activation.commandPatterns[${index}] is not a valid RegExp: ${error.message}`);
+      }
+    });
+  }
+}
+
+function validatePromptSignals(promptSignals, filePath) {
+  if (!promptSignals || typeof promptSignals !== "object" || Array.isArray(promptSignals)) {
+    fail(`${filePath}: activation.promptSignals must be an object`);
+    return;
+  }
+
+  const allowedKeys = new Set(["phrases", "allOf", "anyOf", "noneOf"]);
+  for (const key of Object.keys(promptSignals)) {
+    if (!allowedKeys.has(key)) fail(`${filePath}: activation.promptSignals has unknown field ${key}`);
+  }
+
+  expectStringArray(promptSignals, "phrases", `${filePath}: activation.promptSignals`, { allowEmpty: true });
+  expectStringArray(promptSignals, "anyOf", `${filePath}: activation.promptSignals`, { allowEmpty: true });
+  expectStringArray(promptSignals, "noneOf", `${filePath}: activation.promptSignals`, { allowEmpty: true });
+
+  if (!Array.isArray(promptSignals.allOf)) {
+    fail(`${filePath}: activation.promptSignals.allOf must be an array`);
+    return;
+  }
+
+  promptSignals.allOf.forEach((group, groupIndex) => {
+    if (!Array.isArray(group) || group.length === 0) {
+      fail(`${filePath}: activation.promptSignals.allOf[${groupIndex}] must be a non-empty string array`);
+      return;
+    }
+
+    group.forEach((item, itemIndex) => {
+      if (typeof item !== "string" || item.trim() === "") {
+        fail(`${filePath}: activation.promptSignals.allOf[${groupIndex}][${itemIndex}] must be a non-empty string`);
+      }
+    });
+
+    if (new Set(group).size !== group.length) {
+      fail(`${filePath}: activation.promptSignals.allOf[${groupIndex}] must not contain duplicates`);
     }
   });
 }

@@ -25,12 +25,43 @@ recommendedTools:
     kind: service
     purpose: Query relational datasets and validate aggregates.
     when: Use only when a live database or SQL export is part of the task.
-activationHints:
-  - CSV, XLSX, spreadsheet, table, or dataset
-  - metrics, cohorts, funnels, or trends
-  - charts, dashboards, or visualizations
-  - summarize findings or write a report
-  - SQL query or aggregate analysis
+activation:
+  pathPatterns:
+    - "**/*.csv"
+    - "**/*.tsv"
+    - "**/*.xlsx"
+    - "**/*.xls"
+    - "**/*.parquet"
+    - "**/*.jsonl"
+  commandPatterns:
+    - "\\bpython\\b"
+    - "\\bjupyter\\b"
+    - "\\b(sqlite3|psql|duckdb)\\b"
+  promptSignals:
+    phrases:
+      - CSV
+      - spreadsheet
+      - dataset
+      - metrics
+      - cohorts
+      - funnel
+      - trend
+      - chart
+      - dashboard
+      - SQL query
+      - aggregate analysis
+    allOf:
+      - [summarize, findings]
+      - [weekly, activation]
+    anyOf:
+      - XLSX
+      - table
+      - visualization
+      - report
+    noneOf:
+      - implement API
+      - React component
+  minScore: 6
 aliases:
   - analyst
   - data

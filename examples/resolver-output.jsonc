@@ -11,6 +11,14 @@
         "reason": "Task mentions a TSX file, keyboard navigation, and browser verification."
       }
     ],
+    "activationMatches": [
+      {
+        "degreeId": "frontend-engineer",
+        "pathPatterns": ["**/*.tsx"],
+        "commandPatterns": [],
+        "promptSignals": ["TSX files", "keyboard navigation", "browser verification"]
+      }
+    ],
     "includeSkills": [
       "react-best-practices",
       "frontend-design",
@@ -62,6 +70,20 @@
         "role": "secondary",
         "confidence": 0.68,
         "reason": "The task also requires API and permission behavior for invoice recipients."
+      }
+    ],
+    "activationMatches": [
+      {
+        "degreeId": "frontend-engineer",
+        "pathPatterns": [],
+        "commandPatterns": [],
+        "promptSignals": ["settings page"]
+      },
+      {
+        "degreeId": "backend-engineer",
+        "pathPatterns": [],
+        "commandPatterns": [],
+        "promptSignals": ["API", "permission"]
       }
     ],
     "includeSkills": [

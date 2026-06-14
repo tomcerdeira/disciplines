@@ -25,12 +25,41 @@ recommendedTools:
   - id: issue-tracker
     kind: service
     purpose: Link research outputs to issues, projects, or implementation plans.
-activationHints:
-  - user needs, personas, or research synthesis
-  - competitive analysis or market scan
-  - PRD, brief, roadmap, or requirements
-  - product strategy or feature discovery
-  - interview notes or customer feedback
+activation:
+  pathPatterns:
+    - "docs/**/*.md"
+    - "research/**"
+    - "prd/**"
+    - "roadmap/**"
+    - "**/*interview*.md"
+  commandPatterns:
+    - "\\bweb\\s+search\\b"
+  promptSignals:
+    phrases:
+      - user needs
+      - personas
+      - research synthesis
+      - competitive analysis
+      - market scan
+      - PRD
+      - product brief
+      - roadmap
+      - requirements
+      - product strategy
+      - feature discovery
+      - customer feedback
+    allOf:
+      - [interview, notes]
+      - [write, brief]
+    anyOf:
+      - MVP
+      - positioning
+      - problem framing
+      - tradeoffs
+    noneOf:
+      - database migration
+      - CI failure
+  minScore: 6
 aliases:
   - product
   - researcher

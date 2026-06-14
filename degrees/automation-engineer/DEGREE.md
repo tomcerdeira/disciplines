@@ -28,12 +28,41 @@ recommendedTools:
   - id: workflow-runner
     kind: service
     purpose: Execute or inspect workflow runs in CI or agent-hosted environments.
-activationHints:
-  - script, cron, scheduled job, or workflow
-  - CI, GitHub Actions, or deployment automation
-  - repeat this task or make it reusable
-  - integrate APIs, CLIs, or webhooks
-  - batch operation or operational runbook
+activation:
+  pathPatterns:
+    - "scripts/**"
+    - ".github/workflows/**"
+    - "bin/**"
+    - "cron/**"
+    - "**/*.sh"
+  commandPatterns:
+    - "\\bgh\\s+(workflow|run|pr|issue)\\b"
+    - "\\b(cron|crontab)\\b"
+    - "\\b(bash|sh|python|node)\\s+scripts/"
+  promptSignals:
+    phrases:
+      - script
+      - cron
+      - scheduled job
+      - workflow
+      - GitHub Actions
+      - deployment automation
+      - repeat this task
+      - make it reusable
+      - webhook
+      - runbook
+    allOf:
+      - [batch, operation]
+      - [manual, checklist]
+    anyOf:
+      - CLI
+      - CI
+      - scheduler
+      - idempotent
+    noneOf:
+      - visual design
+      - market research
+  minScore: 6
 aliases:
   - automation
   - workflow-engineer

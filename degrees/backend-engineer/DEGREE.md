@@ -29,12 +29,44 @@ recommendedTools:
     kind: service
     purpose: Inspect logs, traces, metrics, and production error evidence.
     when: Use for production behavior, regressions, latency, or incident work.
-activationHints:
-  - API routes, controllers, handlers, or services
-  - database queries, schemas, indexes, or migrations
-  - auth, permissions, rate limits, or background jobs
-  - server-side tests or integration tests
-  - logs, traces, metrics, or production errors
+activation:
+  pathPatterns:
+    - "src/**/api/**"
+    - "src/**/routes/**"
+    - "src/**/controllers/**"
+    - "src/**/services/**"
+    - "src/**/repositories/**"
+    - "migrations/**"
+    - "**/*.sql"
+  commandPatterns:
+    - "\\b(curl|http)\\b"
+    - "\\b(npm|pnpm|bun|yarn)\\s+run\\s+(test|typecheck|build)\\b"
+    - "\\b(prisma|drizzle|knex|typeorm)\\b"
+  promptSignals:
+    phrases:
+      - API route
+      - endpoint
+      - database query
+      - schema
+      - migration
+      - auth
+      - permissions
+      - rate limit
+      - background job
+      - production error
+    allOf:
+      - [server, test]
+      - [logs, traces]
+    anyOf:
+      - controller
+      - handler
+      - service
+      - index
+      - webhook
+    noneOf:
+      - visual polish
+      - responsive layout
+  minScore: 6.5
 aliases:
   - api-engineer
   - backend

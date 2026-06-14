@@ -22,7 +22,7 @@ Degrees provide a portable curation layer above skills. They describe which skil
 - **Included skill**: A skill that belongs in the initial context bundle for the degree.
 - **Recommended tool**: An advisory tool reference, such as an MCP server, CLI, browser, package manager, runtime, or external service.
 - **Soft exclusion**: A skill or skill family that should not be loaded by default, but may be loaded when explicitly requested or supported by concrete task evidence.
-- **Activation hint**: A phrase, file pattern, tool name, or domain signal that helps map a user task to a degree.
+- **Activation signal**: A structured path pattern, command pattern, prompt signal, or score threshold that helps map a user task to a degree.
 - **Focus prompt**: The markdown body of `DEGREE.md`. It tells the agent how to behave while operating under that degree.
 - **Resolver**: A future adapter or manual process that compares a task against available degrees and emits an advisory context bundle.
 
@@ -59,10 +59,25 @@ recommendedTools:
   - id: npm
     kind: package-manager
     purpose: Run frontend scripts and package checks.
-activationHints:
-  - TSX files
-  - layout and styling
-  - accessibility
+activation:
+  pathPatterns:
+    - "**/*.tsx"
+    - "src/components/**"
+  commandPatterns:
+    - "\\b(npm|pnpm|bun|yarn)\\s+run\\s+(dev|build|lint|test)\\b"
+  promptSignals:
+    phrases:
+      - TSX files
+      - layout
+      - accessibility
+    allOf:
+      - [browser, verify]
+    anyOf:
+      - React
+      - ARIA
+    noneOf:
+      - database migration
+  minScore: 6.5
 ---
 
 You are operating under the Frontend Engineer degree.
@@ -75,7 +90,7 @@ The portable schema lives at [schema/degree.schema.json](schema/degree.schema.js
 ## Intended Workflow
 
 1. A user gives the agent a task.
-2. The agent, user, or future resolver compares the task with degree `activationHints`.
+2. The agent, user, or future resolver compares the task with degree `activation` signals.
 3. The best matching degree is selected. If confidence is low, the agent asks the user to choose.
 4. The agent loads the degree focus prompt and the degree's `includeSkills`.
 5. The agent considers `recommendedTools` when a task needs MCPs, CLIs, browsers, package managers, runtimes, or services.
