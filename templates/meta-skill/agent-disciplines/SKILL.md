@@ -11,9 +11,9 @@ Use this skill as a lightweight preflight before non-trivial work. It does not r
 
 - User task text.
 - Relevant repo paths, changed files, commands, logs, or other evidence.
-- Path to the local `agent-disciplines` repo.
+- Installed disciplines.
 
-If the repo path is not known, use `$AGENT_DISCIPLINES_HOME` when set. Otherwise ask the user for the path or proceed without discipline resolution.
+Use `npx disciplines use installed` to resolve against installed disciplines. If no disciplines are installed, ask the user to run `npx disciplines add <source>`.
 
 ## Workflow
 
@@ -25,7 +25,7 @@ If the repo path is not known, use `$AGENT_DISCIPLINES_HOME` when set. Otherwise
 2. Run the local resolver:
 
    ```sh
-   npm --prefix "$AGENT_DISCIPLINES_HOME" run resolve -- \
+   npx disciplines use installed \
      --task "<task>" \
      --file "<relevant/path>" \
      --command "<relevant command>"

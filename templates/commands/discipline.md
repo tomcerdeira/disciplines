@@ -17,7 +17,7 @@ Task:
 Run:
 
 ```sh
-npm --prefix "<AGENT_DISCIPLINES_REPO>" run resolve -- --task "<COMMAND_ARGUMENTS>"
+npx disciplines use installed --task "<COMMAND_ARGUMENTS>"
 ```
 
 If relevant files, commands, logs, or errors are already known, include them as `--file` and `--command` arguments.

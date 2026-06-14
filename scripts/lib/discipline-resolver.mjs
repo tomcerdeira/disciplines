@@ -1,4 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 
@@ -23,9 +24,25 @@ export function splitDisciplineFile(source, filePath) {
 }
 
 export async function loadDisciplines(root) {
+  if (existsSync(path.join(root, "DISCIPLINE.md"))) {
+    const packageName = path.basename(root);
+    const relativePath = path.join(packageName, "DISCIPLINE.md");
+    const source = await readFile(path.join(root, "DISCIPLINE.md"), "utf8");
+    const { frontmatter, body } = splitDisciplineFile(source, relativePath);
+    return [{
+      ...YAML.parse(frontmatter),
+      packageId: packageName,
+      filePath: relativePath,
+      body,
+    }];
+  }
+
   const disciplinesDir = path.join(root, "disciplines");
   const entries = await readdir(disciplinesDir, { withFileTypes: true });
-  const packages = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+  const packages = entries
+    .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+    .map((entry) => entry.name)
+    .sort();
   const disciplines = [];
 
   for (const packageName of packages) {

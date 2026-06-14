@@ -1,6 +1,6 @@
 # Generic Prompt-Only Discipline Prelude
 
-Paste the output of `npm run resolve -- ...` below, then add the user's normal task after it.
+Paste the output of `npx disciplines use installed --task "..."` below, then add the user's normal task after it.
 
 ```md
 <PASTE RESOLVER OUTPUT HERE>

@@ -4,7 +4,7 @@ These templates are copy-paste surfaces for v1. They do not install an adapter o
 
 Use them like this:
 
-1. Run `npm run resolve -- ...` for the task.
+1. Run `npx disciplines use installed --task "..."` for the task.
 2. Copy the resolver output.
 3. Paste the resolver output into one of these templates.
 4. Put the completed template above the normal task prompt in Cursor, Claude Code, Codex, or a generic chat model.

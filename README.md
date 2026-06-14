@@ -136,15 +136,17 @@ If the resolver returns `ask`, choose the discipline manually or provide stronge
 
 ## CLI Usage
 
-The `disciplines` CLI wraps the same resolver and installs lightweight invocation glue for supported agents.
+The `disciplines` CLI follows the same shape as `npx skills`, but installs and resolves higher-level discipline packages.
 
 ```sh
-npx disciplines list .
-npx disciplines use . --task "Fix keyboard navigation in SearchResults.tsx" --file src/components/SearchResults.tsx
-npx disciplines add tomcerdeira/agent-disciplines --agent claude-code --global --yes
+npx disciplines add tomcerdeira/agent-disciplines --discipline frontend-engineer
+npx disciplines use tomcerdeira/agent-disciplines@frontend-engineer
+npx disciplines use installed --task "Fix keyboard navigation in SearchResults.tsx" --file src/components/SearchResults.tsx
+npx disciplines list
+npx disciplines find frontend
 ```
 
-`disciplines add` can install Claude Code, Codex, and Cursor entrypoints such as meta-skills, slash/custom commands, and repo instruction snippets. It asks before overwriting existing files unless `--yes` is passed. It still preserves the v1 advisory model: no hard enforcement, no automatic tool/plugin installation, and no mutation of installed skills beyond explicitly requested adapter files.
+`disciplines add` installs selected `DISCIPLINE.md` packages into a project or global discipline store and can install Claude Code, Codex, and Cursor entrypoints such as meta-skills, slash/custom commands, and repo instruction snippets. It uses symlinks by default, supports `--copy`, asks before overwriting existing files unless `--yes` is passed, and preserves the advisory model: no hard enforcement, no automatic tool/plugin installation, and no hiding skills.
 
 See [docs/cli.md](docs/cli.md) for source formats, flags, scopes, and examples.
 

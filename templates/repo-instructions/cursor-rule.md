@@ -2,10 +2,10 @@
 
 Apply this rule to coding, debugging, review, research, and automation tasks that are not trivial one-line edits.
 
-Before starting, resolve the task against the local `agent-disciplines` repo:
+Before starting, resolve the task against installed disciplines:
 
 ```sh
-npm --prefix "<AGENT_DISCIPLINES_REPO>" run resolve -- \
+<AGENT_DISCIPLINES_COMMAND> \
   --task "<user task>" \
   --file "<relevant file>" \
   --command "<relevant command>"

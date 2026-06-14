@@ -2,16 +2,10 @@
 
 Before non-trivial work, run an agent-disciplines preflight.
 
-Use the local `agent-disciplines` repo at:
-
-```text
-<AGENT_DISCIPLINES_REPO>
-```
-
 Resolve the task with the smallest useful evidence set:
 
 ```sh
-npm --prefix "<AGENT_DISCIPLINES_REPO>" run resolve -- \
+<AGENT_DISCIPLINES_COMMAND> \
   --task "<user task>" \
   --file "<relevant file>" \
   --command "<relevant command>"

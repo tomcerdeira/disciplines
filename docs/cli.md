@@ -1,78 +1,118 @@
 # Disciplines CLI
 
-The `disciplines` CLI is a thin installer and resolver wrapper for discipline packages. It keeps v1 advisory: it writes invocation files when asked, runs the local resolver, and prints discipline guidance. It does not hide skills, enforce exclusions, install MCP servers, or install CLIs.
+The `disciplines` CLI is a small package manager for discipline packages. It intentionally mirrors the `skills` workflow while keeping disciplines advisory: it installs `DISCIPLINE.md` packages, writes lightweight agent glue when asked, resolves tasks, and prints prompt bundles. It does not hide skills, enforce exclusions, install MCP servers, or install CLIs.
 
 ## Commands
 
 ```sh
-disciplines list [source]
-disciplines use <source> --task "..." [--file path] [--command cmd] [--format prompt|json]
-disciplines add <source> [--agent claude-code|codex|cursor|*] [--global|--project] [--copy] [--yes] [--list]
+disciplines add <source> [--discipline <ids...>|--all] [--agent <agents...>] [--global|--project] [--copy] [--yes] [--list]
+disciplines use <source[@discipline]|installed> [--discipline <ids...>] [--task "..."] [--file path] [--command cmd] [--format prompt|json]
+disciplines list|ls [source] [--global|--project]
+disciplines find [query] [--global|--project]
+disciplines remove|rm [ids...] [--discipline <ids...>] [--all] [--global|--project] [--yes]
+disciplines update [ids...] [--discipline <ids...>] [--global|--project] [--yes]
+disciplines init [name]
 ```
 
-`source` can be a local path, a GitHub URL, or a GitHub shorthand:
+## Source Formats
 
 ```sh
-disciplines list .
-disciplines list https://github.com/tomcerdeira/agent-disciplines
-disciplines list tomcerdeira/agent-disciplines
+disciplines add tomcerdeira/agent-disciplines
+disciplines add https://github.com/tomcerdeira/agent-disciplines
+disciplines add https://github.com/tomcerdeira/agent-disciplines/tree/main/disciplines/frontend-engineer
+disciplines add git@github.com:tomcerdeira/agent-disciplines.git
+disciplines add ./local-disciplines
 ```
 
-## Resolve a Task
-
-Use `disciplines use` when you want a copy-paste prelude for a normal agent task:
+Use `@id` when selecting one discipline from a source:
 
 ```sh
-disciplines use . \
-  --task "Fix keyboard navigation in the candidates desktop view" \
-  --file src/modules/candidates/ui/candidates-page.tsx \
-  --command "bun run typecheck"
+disciplines use tomcerdeira/agent-disciplines@frontend-engineer
 ```
 
-The output is a task-local bundle with the selected discipline, score evidence, included skill ids, recommended tools, soft exclusions, and the discipline focus prompt. Use `--format json` when an adapter or script needs structured output.
+## Install
 
-## Install Invocation Glue
-
-Use `disciplines add` when you want agents to discover discipline preflight without manually copying templates.
+Install one discipline:
 
 ```sh
-disciplines add tomcerdeira/agent-disciplines --agent claude-code --global --yes
-disciplines add . --agent codex --project --yes
-disciplines add . --agent cursor --project --yes
-disciplines add . --agent '*' --global --project --yes
+disciplines add tomcerdeira/agent-disciplines --discipline frontend-engineer
+```
+
+Install every discipline and every supported adapter globally:
+
+```sh
+disciplines add tomcerdeira/agent-disciplines --all --agent '*' --global --yes
 ```
 
 Supported agents:
 
-- `claude-code`: writes Claude Code skill and `/discipline` command files.
+- `claude-code`: writes Claude Code skills and `/discipline` command files.
 - `codex`: writes Codex-compatible skill files and project instructions.
 - `cursor`: writes Cursor rule files.
 - `*`: installs every supported adapter.
 
 Scopes:
 
-- `--global`: writes to the agent's user-level configuration directory.
-- `--project`: writes repo-local instruction or command files under the current working directory.
-- no scope flag: defaults to `--global`.
+- `--project`: installs under `.agents/disciplines/` in the current project.
+- `--global`: installs under `~/.agent-disciplines/disciplines/`.
+- no scope flag: defaults to `--project` for `add`, and auto-detects project before global for `list`, `find`, `remove`, and `update`.
 
-Source handling:
+Installation method:
 
-- GitHub sources are cloned into `~/.agent-disciplines/sources/`.
-- Local sources are referenced in place by default.
-- `--copy` copies a local source into `~/.agent-disciplines/sources/` and reuses an existing cached copy if present.
+- default: symlink each installed discipline to the resolved source package.
+- `--copy`: copy package files into the target store.
 
 Overwrite behavior:
 
 - Existing target files are not overwritten unless you confirm interactively.
 - In non-interactive shells, existing files are skipped unless `--yes` is passed.
-- `--yes` overwrites generated adapter files.
+- `--yes` overwrites generated adapter files and installed discipline packages.
 
-## Inspect Before Installing
+## Use
 
-Use `--list` with `add` to inspect a source before writing adapter files:
+Use without installing:
 
 ```sh
-disciplines add tomcerdeira/agent-disciplines --list
+disciplines use tomcerdeira/agent-disciplines@frontend-engineer
 ```
 
-This resolves the source and lists the available discipline packages.
+Resolve a task against installed disciplines:
+
+```sh
+disciplines use installed \
+  --task "Fix keyboard navigation in the candidates desktop view" \
+  --file src/modules/candidates/ui/candidates-page.tsx \
+  --command "bun run typecheck"
+```
+
+The output is a task-local bundle with selected disciplines, score evidence, included skill ids, recommended tools, soft exclusions, and focus prompts. Use `--format json` when an adapter or script needs structured output.
+
+## List and Find
+
+```sh
+disciplines list
+disciplines ls --global
+disciplines list tomcerdeira/agent-disciplines --discipline frontend-engineer
+disciplines find react
+```
+
+`list` without a source shows installed disciplines. `list <source>` inspects a source without installing. `find` searches installed disciplines by id, name, description, aliases, included skills, and recommended tools.
+
+## Remove and Update
+
+```sh
+disciplines remove frontend-engineer
+disciplines rm --all --global --yes
+disciplines update
+disciplines update frontend-engineer --project
+```
+
+`update` refreshes cached git sources and relinks or recopies installed packages based on their manifest entries.
+
+## Init
+
+```sh
+disciplines init software-engineer
+```
+
+This creates `software-engineer/DISCIPLINE.md` from the template.

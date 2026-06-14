@@ -2,16 +2,10 @@
 
 Run an agent-disciplines preflight before non-trivial implementation, debugging, review, or research work.
 
-Configured repo:
-
-```text
-<AGENT_DISCIPLINES_REPO>
-```
-
 Command shape:
 
 ```sh
-npm --prefix "<AGENT_DISCIPLINES_REPO>" run resolve -- \
+<AGENT_DISCIPLINES_COMMAND> \
   --task "<user task>" \
   --file "<relevant file>" \
   --command "<relevant command>"
