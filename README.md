@@ -19,12 +19,23 @@ Degrees provide a portable curation layer above skills. They describe which skil
 
 - **Degree**: A named capability profile for an agent, stored as a package folder with a `DEGREE.md` entrypoint.
 - **Skill**: A runtime-specific instruction bundle, tool guide, or reusable workflow that a degree can reference by id.
-- **Included skill**: A skill that belongs in the initial context bundle for the degree.
+- **Included skill**: A skill id that belongs on the degree's initial shortlist before full skill bodies are loaded.
 - **Recommended tool**: An advisory tool reference, such as an MCP server, CLI, browser, package manager, runtime, or external service.
 - **Soft exclusion**: A skill or skill family that should not be loaded by default, but may be loaded when explicitly requested or supported by concrete task evidence.
 - **Activation signal**: A structured path pattern, command pattern, prompt signal, or score threshold that helps map a user task to a degree.
 - **Focus prompt**: The markdown body of `DEGREE.md`. It tells the agent how to behave while operating under that degree.
 - **Resolver**: A future adapter or manual process that compares a task against available degrees and emits an advisory context bundle.
+
+## Progressive Disclosure
+
+Degrees should load the same way effective skills load: start with lightweight metadata, then expand only when the task matches.
+
+1. **Degree metadata**: The agent sees each degree package id, `name`, `description`, and `activation` signals. This is enough to decide whether a degree might fit.
+2. **Matched `DEGREE.md` body**: After a degree is selected or composed, the agent loads that degree's focus prompt, included skill ids, recommended tools, and soft exclusions.
+3. **Mapped skills and tools**: The agent then maps `includeSkills` and `recommendedTools` to what the current runtime actually has. Missing skills or tools are reported, not silently replaced.
+4. **Skill/resource expansion**: Only after the degree is active should the agent load the full bodies of matching skills or tool-specific instructions. Soft-excluded skills stay out unless user intent or concrete evidence justifies them.
+
+This keeps the initial context small across both the degree set and the skill set. A degree is not itself a runtime skill; it is the layer that decides which skills and tools deserve attention first.
 
 ## Package Format
 
@@ -56,9 +67,10 @@ recommendedTools:
     kind: mcp
     purpose: Verify UI behavior in a real browser.
     when: Use after visible UI changes or when debugging browser-only behavior.
-  - id: npm
+  - id: package-manager
     kind: package-manager
-    purpose: Run frontend scripts and package checks.
+    purpose: Run the repository's configured frontend scripts and package checks.
+    when: Prefer the package manager required by local repo instructions.
 activation:
   pathPatterns:
     - "**/*.tsx"
@@ -90,12 +102,13 @@ The portable schema lives at [schema/degree.schema.json](schema/degree.schema.js
 ## Intended Workflow
 
 1. A user gives the agent a task.
-2. The agent, user, or future resolver compares the task with degree `activation` signals.
-3. The best matching degree is selected. If confidence is low, the agent asks the user to choose.
-4. The agent loads the degree focus prompt and the degree's `includeSkills`.
-5. The agent considers `recommendedTools` when a task needs MCPs, CLIs, browsers, package managers, runtimes, or services.
-6. The agent treats `softExcludeSkills` as advisory boundaries, not hard blocks.
-7. If direct evidence appears, the agent may load an excluded or adjacent skill and should state why.
+2. The agent, user, or future resolver compares the task with lightweight degree metadata and `activation` signals.
+3. The best matching degree is selected or composed. If confidence is low, the agent asks the user to choose.
+4. The agent loads only the selected degree's `DEGREE.md` body and frontmatter bundle.
+5. The agent maps the degree's `includeSkills` and `recommendedTools` to available local skills, MCPs, CLIs, package managers, runtimes, or services.
+6. The agent loads matching skill bodies or tool instructions only when they are needed for the task.
+7. The agent treats `softExcludeSkills` as advisory boundaries, not hard blocks.
+8. If direct evidence appears, the agent may load an excluded or adjacent skill and should state why.
 
 ## Example Degrees
 

@@ -34,6 +34,18 @@ A resolver may use these inputs:
 
 Only `task` and `degrees` are required for a portable prompt-only resolver.
 
+## Progressive Disclosure Contract
+
+Resolvers should treat the degree set like a skill set:
+
+1. Index all available degrees by lightweight metadata: package id, `name`, `description`, `activation`, aliases, and optional thresholds.
+2. Compare the task and repo evidence against that metadata without loading every degree body.
+3. Load the full `DEGREE.md` body only for selected or composed degrees.
+4. Use the loaded degree to shortlist skills and tools.
+5. Load full skill bodies, skill references, MCP documentation, CLI docs, or adapter-specific instructions only when the selected degree and task make them relevant.
+
+The resolver output may include `includeSkills` and `recommendedTools`, but this is not the same as loading those resources. They are the next layer of progressive disclosure.
+
 ## Matching Signals
 
 The resolver should look for evidence in this order:

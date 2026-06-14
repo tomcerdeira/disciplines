@@ -29,6 +29,18 @@ degrees/
 
 Keep `DEGREE.md` as the required entrypoint. Do not use `SKILL.md`; a degree curates skills but is not itself a skill.
 
+## Loading Model
+
+Author degrees for progressive disclosure, mirroring how skills work:
+
+1. The resolver sees lightweight metadata for every degree: folder id, `name`, `description`, and `activation`.
+2. The resolver selects, composes, asks, or returns none.
+3. The agent loads only the selected degree's full `DEGREE.md`.
+4. The selected degree then exposes preferred skill ids, recommended tools, and soft exclusions.
+5. The agent maps those ids to local runtime skills/tools and loads full skill or tool instructions only when the task needs them.
+
+This means a degree description and activation metadata must be strong enough to decide whether the degree should load. The body should assume the degree already matched; it should not repeat every possible trigger phrase.
+
 ## Start With the Boundary
 
 Before writing fields, answer two questions:
