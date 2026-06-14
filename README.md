@@ -136,15 +136,15 @@ If the resolver returns `ask`, choose the degree manually or provide stronger ta
 
 ## CLI Usage
 
-The `degrees` CLI wraps the same resolver and installs lightweight invocation glue for supported agents.
+The `disciplines` CLI wraps the same resolver and installs lightweight invocation glue for supported agents.
 
 ```sh
-degrees list .
-degrees use . --task "Fix keyboard navigation in SearchResults.tsx" --file src/components/SearchResults.tsx
-degrees add tomcerdeira/agent-degrees --agent claude-code --global --yes
+npx disciplines list .
+npx disciplines use . --task "Fix keyboard navigation in SearchResults.tsx" --file src/components/SearchResults.tsx
+npx disciplines add tomcerdeira/agent-degrees --agent claude-code --global --yes
 ```
 
-`degrees add` can install Claude Code, Codex, and Cursor entrypoints such as meta-skills, slash/custom commands, and repo instruction snippets. It asks before overwriting existing files unless `--yes` is passed. It still preserves the v1 advisory model: no hard enforcement, no automatic tool/plugin installation, and no mutation of installed skills beyond explicitly requested adapter files.
+`disciplines add` can install Claude Code, Codex, and Cursor entrypoints such as meta-skills, slash/custom commands, and repo instruction snippets. It asks before overwriting existing files unless `--yes` is passed. It still preserves the v1 advisory model: no hard enforcement, no automatic tool/plugin installation, and no mutation of installed skills beyond explicitly requested adapter files.
 
 See [docs/cli.md](docs/cli.md) for source formats, flags, scopes, and examples.
 

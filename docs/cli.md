@@ -1,29 +1,29 @@
-# Degrees CLI
+# Disciplines CLI
 
-The `degrees` CLI is a thin installer and resolver wrapper for degree packages. It keeps v1 advisory: it writes invocation files when asked, runs the local resolver, and prints degree guidance. It does not hide skills, enforce exclusions, install MCP servers, or install CLIs.
+The `disciplines` CLI is a thin installer and resolver wrapper for degree packages. It keeps v1 advisory: it writes invocation files when asked, runs the local resolver, and prints degree guidance. It does not hide skills, enforce exclusions, install MCP servers, or install CLIs.
 
 ## Commands
 
 ```sh
-degrees list [source]
-degrees use <source> --task "..." [--file path] [--command cmd] [--format prompt|json]
-degrees add <source> [--agent claude-code|codex|cursor|*] [--global|--project] [--copy] [--yes] [--list]
+disciplines list [source]
+disciplines use <source> --task "..." [--file path] [--command cmd] [--format prompt|json]
+disciplines add <source> [--agent claude-code|codex|cursor|*] [--global|--project] [--copy] [--yes] [--list]
 ```
 
 `source` can be a local path, a GitHub URL, or a GitHub shorthand:
 
 ```sh
-degrees list .
-degrees list https://github.com/tomcerdeira/agent-degrees
-degrees list tomcerdeira/agent-degrees
+disciplines list .
+disciplines list https://github.com/tomcerdeira/agent-degrees
+disciplines list tomcerdeira/agent-degrees
 ```
 
 ## Resolve a Task
 
-Use `degrees use` when you want a copy-paste prelude for a normal agent task:
+Use `disciplines use` when you want a copy-paste prelude for a normal agent task:
 
 ```sh
-degrees use . \
+disciplines use . \
   --task "Fix keyboard navigation in the candidates desktop view" \
   --file src/modules/candidates/ui/candidates-page.tsx \
   --command "bun run typecheck"
@@ -33,13 +33,13 @@ The output is a task-local bundle with the selected degree, score evidence, incl
 
 ## Install Invocation Glue
 
-Use `degrees add` when you want agents to discover degree preflight without manually copying templates.
+Use `disciplines add` when you want agents to discover degree preflight without manually copying templates.
 
 ```sh
-degrees add tomcerdeira/agent-degrees --agent claude-code --global --yes
-degrees add . --agent codex --project --yes
-degrees add . --agent cursor --project --yes
-degrees add . --agent '*' --global --project --yes
+disciplines add tomcerdeira/agent-degrees --agent claude-code --global --yes
+disciplines add . --agent codex --project --yes
+disciplines add . --agent cursor --project --yes
+disciplines add . --agent '*' --global --project --yes
 ```
 
 Supported agents:
@@ -72,7 +72,7 @@ Overwrite behavior:
 Use `--list` with `add` to inspect a source before writing adapter files:
 
 ```sh
-degrees add tomcerdeira/agent-degrees --list
+disciplines add tomcerdeira/agent-degrees --list
 ```
 
 This resolves the source and lists the available degree packages.

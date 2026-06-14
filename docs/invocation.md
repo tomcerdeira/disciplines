@@ -5,8 +5,8 @@ The v1 resolver works without runtime integration, but you can make it feel more
 The easiest path is the CLI:
 
 ```sh
-degrees add tomcerdeira/agent-degrees --agent claude-code --global --yes
-degrees add . --agent '*' --project --yes
+npx disciplines add tomcerdeira/agent-degrees --agent claude-code --global --yes
+npx disciplines add . --agent '*' --project --yes
 ```
 
 See [cli.md](cli.md) for supported sources, agents, scopes, and overwrite behavior. The manual options below are useful when you want to inspect or customize the generated files.

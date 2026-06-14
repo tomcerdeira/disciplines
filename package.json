@@ -1,17 +1,31 @@
 {
-  "name": "degrees",
+  "name": "disciplines",
   "version": "0.1.0",
   "description": "Spec-first portable degree profiles for agent skills and tools.",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomcerdeira/agent-degrees.git"
+  },
+  "files": [
+    "degrees",
+    "docs",
+    "examples",
+    "schema",
+    "scripts",
+    "templates",
+    "README.md"
+  ],
   "bin": {
-    "degrees": "scripts/degrees.mjs"
+    "disciplines": "scripts/degrees.mjs"
   },
   "scripts": {
     "resolve": "node scripts/resolve-degree.mjs",
     "validate": "node scripts/validate-degrees.mjs",
     "check:fixtures": "node scripts/check-resolver-fixtures.mjs"
   },
-  "devDependencies": {
+  "dependencies": {
     "yaml": "^2.9.0"
   }
 }

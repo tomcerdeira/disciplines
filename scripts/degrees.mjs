@@ -20,9 +20,9 @@ const STORE_DIR = path.join(os.homedir(), ".agent-degrees", "sources");
 
 function usage() {
   console.log(`Usage:
-  degrees list [source]
-  degrees use <source> --task "..." [--file path] [--command cmd] [--format prompt|json]
-  degrees add <source> [--agent claude-code|codex|cursor|*] [--global|--project] [--copy] [--yes] [--list]
+  disciplines list [source]
+  disciplines use <source> --task "..." [--file path] [--command cmd] [--format prompt|json]
+  disciplines add <source> [--agent claude-code|codex|cursor|*] [--global|--project] [--copy] [--yes] [--list]
 
 Sources:
   ./agent-degrees
@@ -30,10 +30,10 @@ Sources:
   tomcerdeira/agent-degrees
 
 Examples:
-  degrees list .
-  degrees use . --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
-  degrees add tomcerdeira/agent-degrees --agent claude-code --global --yes
-  degrees add . --agent cursor --project --yes
+  disciplines list .
+  disciplines use . --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
+  disciplines add tomcerdeira/agent-degrees --agent claude-code --global --yes
+  disciplines add . --agent cursor --project --yes
 `);
 }
 
