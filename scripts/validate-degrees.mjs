@@ -8,6 +8,7 @@ import YAML from "yaml";
 const root = process.cwd();
 const schemaPath = path.join(root, "schema", "degree.schema.json");
 const degreesDir = path.join(root, "degrees");
+const resolverCasesPath = path.join(root, "fixtures", "resolver-cases.jsonc");
 
 const errors = [];
 
@@ -75,6 +76,18 @@ function expectStringArray(data, key, filePath, { allowEmpty = false } = {}) {
   const unique = new Set(data[key]);
   if (unique.size !== data[key].length) {
     fail(`${filePath}: ${key} must not contain duplicates`);
+  }
+}
+
+function parseJsonc(source, filePath) {
+  const withoutBlockComments = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  const withoutLineComments = withoutBlockComments.replace(/^\s*\/\/.*$/gm, "");
+
+  try {
+    return JSON.parse(withoutLineComments);
+  } catch (error) {
+    fail(`${filePath}: invalid JSONC: ${error.message}`);
+    return null;
   }
 }
 
@@ -318,7 +331,163 @@ async function main() {
     validateDegree(data, filePath, schema, seenIds);
   }
 
+  await validateResolverCases(seenIds);
+
   finish(degreePackages.length);
+}
+
+async function validateResolverCases(degreeIds) {
+  const filePath = path.join("fixtures", "resolver-cases.jsonc");
+  let source;
+
+  try {
+    source = await readFile(resolverCasesPath, "utf8");
+  } catch (error) {
+    fail(`${filePath}: missing resolver fixture cases`);
+    return;
+  }
+
+  const cases = parseJsonc(source, filePath);
+  if (!Array.isArray(cases)) {
+    fail(`${filePath}: root must be an array`);
+    return;
+  }
+
+  if (cases.length === 0) {
+    fail(`${filePath}: must contain at least one case`);
+  }
+
+  const caseNames = new Set();
+  const decisions = new Set(["select", "compose", "ask", "none"]);
+
+  cases.forEach((testCase, index) => {
+    const casePath = `${filePath}[${index}]`;
+
+    if (!testCase || typeof testCase !== "object" || Array.isArray(testCase)) {
+      fail(`${casePath}: case must be an object`);
+      return;
+    }
+
+    const allowedCaseKeys = new Set(["name", "task", "repoSignals", "commands", "expected"]);
+    for (const key of Object.keys(testCase)) {
+      if (!allowedCaseKeys.has(key)) fail(`${casePath}: unknown field ${key}`);
+    }
+
+    expectString(testCase, "name", casePath);
+    expectString(testCase, "task", casePath);
+
+    if (typeof testCase.name === "string") {
+      if (caseNames.has(testCase.name)) fail(`${casePath}: duplicate case name ${testCase.name}`);
+      caseNames.add(testCase.name);
+    }
+
+    validateRepoSignals(testCase.repoSignals, casePath);
+    expectStringArray(testCase, "commands", casePath, { allowEmpty: true });
+    validateExpectedResolverCase(testCase.expected, casePath, decisions, degreeIds);
+  });
+}
+
+function validateRepoSignals(repoSignals, casePath) {
+  if (!repoSignals || typeof repoSignals !== "object" || Array.isArray(repoSignals)) {
+    fail(`${casePath}: repoSignals must be an object`);
+    return;
+  }
+
+  const allowedKeys = new Set(["files"]);
+  for (const key of Object.keys(repoSignals)) {
+    if (!allowedKeys.has(key)) fail(`${casePath}: repoSignals has unknown field ${key}`);
+  }
+
+  expectStringArray(repoSignals, "files", `${casePath}: repoSignals`, { allowEmpty: true });
+}
+
+function validateExpectedResolverCase(expected, casePath, decisions, degreeIds) {
+  if (!expected || typeof expected !== "object" || Array.isArray(expected)) {
+    fail(`${casePath}: expected must be an object`);
+    return;
+  }
+
+  const allowedKeys = new Set([
+    "decision",
+    "primaryDegree",
+    "secondaryDegree",
+    "choices",
+    "question",
+    "matchedSignals",
+    "reason"
+  ]);
+
+  for (const key of Object.keys(expected)) {
+    if (!allowedKeys.has(key)) fail(`${casePath}: expected has unknown field ${key}`);
+  }
+
+  if (!decisions.has(expected.decision)) {
+    fail(`${casePath}: expected.decision must be one of ${Array.from(decisions).join(", ")}`);
+  }
+
+  validateOptionalDegreeId(expected.primaryDegree, `${casePath}: expected.primaryDegree`, degreeIds);
+  validateOptionalDegreeId(expected.secondaryDegree, `${casePath}: expected.secondaryDegree`, degreeIds);
+  validateMatchedSignals(expected.matchedSignals, casePath);
+  expectString(expected, "reason", `${casePath}: expected`);
+
+  if (expected.decision === "select") {
+    if (!expected.primaryDegree) fail(`${casePath}: select cases must set expected.primaryDegree`);
+    if (expected.secondaryDegree !== null) fail(`${casePath}: select cases must set expected.secondaryDegree to null`);
+  }
+
+  if (expected.decision === "compose") {
+    if (!expected.primaryDegree) fail(`${casePath}: compose cases must set expected.primaryDegree`);
+    if (!expected.secondaryDegree) fail(`${casePath}: compose cases must set expected.secondaryDegree`);
+  }
+
+  if (expected.decision === "ask") {
+    if (expected.primaryDegree !== null) fail(`${casePath}: ask cases must set expected.primaryDegree to null`);
+    if (expected.secondaryDegree !== null) fail(`${casePath}: ask cases must set expected.secondaryDegree to null`);
+    expectStringArray(expected, "choices", `${casePath}: expected`);
+    expectString(expected, "question", `${casePath}: expected`);
+
+    if (Array.isArray(expected.choices)) {
+      expected.choices.forEach((degreeId, choiceIndex) => {
+        if (!degreeIds.has(degreeId)) {
+          fail(`${casePath}: expected.choices[${choiceIndex}] references unknown degree ${degreeId}`);
+        }
+      });
+    }
+  }
+
+  if (expected.decision === "none") {
+    if (expected.primaryDegree !== null) fail(`${casePath}: none cases must set expected.primaryDegree to null`);
+    if (expected.secondaryDegree !== null) fail(`${casePath}: none cases must set expected.secondaryDegree to null`);
+  }
+}
+
+function validateOptionalDegreeId(value, fieldPath, degreeIds) {
+  if (value === null) return;
+
+  if (typeof value !== "string" || value.trim() === "") {
+    fail(`${fieldPath} must be a degree id string or null`);
+    return;
+  }
+
+  if (!degreeIds.has(value)) {
+    fail(`${fieldPath} references unknown degree ${value}`);
+  }
+}
+
+function validateMatchedSignals(matchedSignals, casePath) {
+  if (!matchedSignals || typeof matchedSignals !== "object" || Array.isArray(matchedSignals)) {
+    fail(`${casePath}: expected.matchedSignals must be an object`);
+    return;
+  }
+
+  const allowedKeys = new Set(["pathPatterns", "commandPatterns", "promptSignals"]);
+  for (const key of Object.keys(matchedSignals)) {
+    if (!allowedKeys.has(key)) fail(`${casePath}: expected.matchedSignals has unknown field ${key}`);
+  }
+
+  expectStringArray(matchedSignals, "pathPatterns", `${casePath}: expected.matchedSignals`, { allowEmpty: true });
+  expectStringArray(matchedSignals, "commandPatterns", `${casePath}: expected.matchedSignals`, { allowEmpty: true });
+  expectStringArray(matchedSignals, "promptSignals", `${casePath}: expected.matchedSignals`, { allowEmpty: true });
 }
 
 function finish(count = 0) {

@@ -202,3 +202,5 @@ The resolver should be conservative:
 - Treat confidence as an explanation aid, not a mathematical guarantee.
 
 Future resolver implementations should be tested against [../examples/validation-matrix.md](../examples/validation-matrix.md).
+
+Machine-readable fixture cases live in [../fixtures/resolver-cases.jsonc](../fixtures/resolver-cases.jsonc). These fixtures define expected decisions and matched signals, but they do not imply that v1 ships a resolver runtime.

@@ -1,0 +1,140 @@
+[
+  {
+    "name": "frontend keyboard navigation",
+    "task": "Fix keyboard navigation in SearchResults.tsx and verify it in browser.",
+    "repoSignals": {
+      "files": ["src/components/SearchResults.tsx"]
+    },
+    "commands": [],
+    "expected": {
+      "decision": "select",
+      "primaryDegree": "frontend-engineer",
+      "secondaryDegree": null,
+      "matchedSignals": {
+        "pathPatterns": ["**/*.tsx"],
+        "commandPatterns": [],
+        "promptSignals": ["keyboard navigation", "browser verification"]
+      },
+      "reason": "TSX path, keyboard navigation language, and browser verification all point to frontend work."
+    }
+  },
+  {
+    "name": "backend rate limit endpoint",
+    "task": "Add a rate limit to the invite creation endpoint and cover it with unit tests.",
+    "repoSignals": {
+      "files": ["src/api/invites/create.ts", "src/api/invites/create.test.ts"]
+    },
+    "commands": ["npm run test"],
+    "expected": {
+      "decision": "select",
+      "primaryDegree": "backend-engineer",
+      "secondaryDegree": null,
+      "matchedSignals": {
+        "pathPatterns": ["src/**/api/**"],
+        "commandPatterns": ["\\b(npm|pnpm|bun|yarn)\\s+run\\s+(test|typecheck|build)\\b"],
+        "promptSignals": ["endpoint", "rate limit"]
+      },
+      "reason": "API path, test command, endpoint language, and rate-limit language point to backend work."
+    }
+  },
+  {
+    "name": "data csv activation chart",
+    "task": "Analyze this CSV export and chart weekly activation by account segment.",
+    "repoSignals": {
+      "files": ["exports/activation.csv"]
+    },
+    "commands": [],
+    "expected": {
+      "decision": "select",
+      "primaryDegree": "data-analyst",
+      "secondaryDegree": null,
+      "matchedSignals": {
+        "pathPatterns": ["**/*.csv"],
+        "commandPatterns": [],
+        "promptSignals": ["CSV", "chart", "weekly activation"]
+      },
+      "reason": "CSV input and charting language point to analysis rather than implementation."
+    }
+  },
+  {
+    "name": "automation github actions workflow",
+    "task": "Turn this manual release checklist into a repeatable GitHub Actions workflow.",
+    "repoSignals": {
+      "files": [".github/workflows/release.yml"]
+    },
+    "commands": ["gh workflow list"],
+    "expected": {
+      "decision": "select",
+      "primaryDegree": "automation-engineer",
+      "secondaryDegree": null,
+      "matchedSignals": {
+        "pathPatterns": [".github/workflows/**"],
+        "commandPatterns": ["\\bgh\\s+(workflow|run|pr|issue)\\b"],
+        "promptSignals": ["manual checklist", "GitHub Actions", "workflow"]
+      },
+      "reason": "Workflow path, GitHub CLI command, and repeatability language point to automation."
+    }
+  },
+  {
+    "name": "full stack billing settings",
+    "task": "Add a billing settings page that lets an admin update invoice recipients.",
+    "repoSignals": {
+      "files": [
+        "src/components/BillingSettings.tsx",
+        "src/api/billing/invoice-recipients.ts"
+      ]
+    },
+    "commands": [],
+    "expected": {
+      "decision": "compose",
+      "primaryDegree": "frontend-engineer",
+      "secondaryDegree": "backend-engineer",
+      "matchedSignals": {
+        "pathPatterns": ["**/*.tsx", "src/**/api/**"],
+        "commandPatterns": [],
+        "promptSignals": ["settings page", "API", "admin"]
+      },
+      "reason": "The user-facing settings page is primary, while the API path and permission behavior justify backend context."
+    }
+  },
+  {
+    "name": "ambiguous onboarding",
+    "task": "Improve onboarding.",
+    "repoSignals": {
+      "files": []
+    },
+    "commands": [],
+    "expected": {
+      "decision": "ask",
+      "primaryDegree": null,
+      "secondaryDegree": null,
+      "choices": ["product-researcher", "frontend-engineer", "data-analyst"],
+      "question": "Should I treat this as product research, frontend implementation, or analytics work?",
+      "matchedSignals": {
+        "pathPatterns": [],
+        "commandPatterns": [],
+        "promptSignals": []
+      },
+      "reason": "The task is too broad and could map to several degrees without stronger evidence."
+    }
+  },
+  {
+    "name": "no legal degree",
+    "task": "Draft a legal review checklist for a vendor data-processing agreement.",
+    "repoSignals": {
+      "files": []
+    },
+    "commands": [],
+    "expected": {
+      "decision": "none",
+      "primaryDegree": null,
+      "secondaryDegree": null,
+      "matchedSignals": {
+        "pathPatterns": [],
+        "commandPatterns": [],
+        "promptSignals": []
+      },
+      "reason": "No available degree covers legal review or contract analysis."
+    }
+  }
+]
