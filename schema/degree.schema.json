@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-degrees.dev/schemas/degree.schema.json",
+  "title": "Agent Degree Frontmatter",
+  "description": "Portable metadata schema for the YAML frontmatter of .degree.md files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "version",
+    "description",
+    "includeSkills",
+    "softExcludeSkills",
+    "activationHints"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable kebab-case identifier for the degree.",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "examples": ["frontend-engineer"]
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable display name.",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "description": "Semver version for this degree definition.",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short explanation of when this degree is useful.",
+      "minLength": 1
+    },
+    "includeSkills": {
+      "type": "array",
+      "description": "Skill ids or skill-family ids to prefer for the initial context bundle.",
+      "items": {
+        "$ref": "#/$defs/skillId"
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "softExcludeSkills": {
+      "type": "array",
+      "description": "Skill ids or skill-family ids to avoid unless requested by the user or justified by concrete task evidence.",
+      "items": {
+        "$ref": "#/$defs/skillId"
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "activationHints": {
+      "type": "array",
+      "description": "Natural-language hints, file patterns, tools, or domain phrases that suggest this degree is relevant.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "aliases": {
+      "type": "array",
+      "description": "Optional alternate names users may use for this degree.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "confidenceThreshold": {
+      "type": "number",
+      "description": "Optional advisory resolver threshold from 0 to 1. Below this value, ask the user to choose.",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.6
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional maintainer notes for humans reviewing the degree."
+    }
+  },
+  "$defs": {
+    "skillId": {
+      "type": "string",
+      "description": "Portable skill reference. Runtime adapters may map this to local skill names.",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    }
+  }
+}
