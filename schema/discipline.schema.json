@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agent-degrees.dev/schemas/degree.schema.json",
-  "title": "Agent Degree Frontmatter",
-  "description": "Portable metadata schema for the YAML frontmatter of degree package DEGREE.md files.",
+  "$id": "https://agent-disciplines.dev/schemas/discipline.schema.json",
+  "title": "Agent Discipline Frontmatter",
+  "description": "Portable metadata schema for the YAML frontmatter of discipline package DISCIPLINE.md files.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,7 +18,7 @@
   "properties": {
     "id": {
       "type": "string",
-      "description": "Stable kebab-case identifier for the degree.",
+      "description": "Stable kebab-case identifier for the discipline.",
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
       "examples": ["frontend-engineer"]
     },
@@ -29,12 +29,12 @@
     },
     "version": {
       "type": "string",
-      "description": "Semver version for this degree definition.",
+      "description": "Semver version for this discipline definition.",
       "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
     },
     "description": {
       "type": "string",
-      "description": "Short explanation of when this degree is useful.",
+      "description": "Short explanation of when this discipline is useful.",
       "minLength": 1
     },
     "includeSkills": {
@@ -57,7 +57,7 @@
     },
     "recommendedTools": {
       "type": "array",
-      "description": "Advisory tools that are usually useful for this degree, such as MCP servers, CLIs, package managers, browsers, or data tools.",
+      "description": "Advisory tools that are usually useful for this discipline, such as MCP servers, CLIs, package managers, browsers, or data tools.",
       "items": {
         "$ref": "#/$defs/toolRecommendation"
       },
@@ -65,11 +65,11 @@
     },
     "activation": {
       "$ref": "#/$defs/activation",
-      "description": "Structured task, file, command, and prompt signals that suggest this degree is relevant."
+      "description": "Structured task, file, command, and prompt signals that suggest this discipline is relevant."
     },
     "aliases": {
       "type": "array",
-      "description": "Optional alternate names users may use for this degree.",
+      "description": "Optional alternate names users may use for this discipline.",
       "items": {
         "type": "string",
         "minLength": 1
@@ -86,7 +86,7 @@
     },
     "notes": {
       "type": "string",
-      "description": "Optional maintainer notes for humans reviewing the degree."
+      "description": "Optional maintainer notes for humans reviewing the discipline."
     }
   },
   "$defs": {
@@ -113,7 +113,7 @@
         },
         "purpose": {
           "type": "string",
-          "description": "Short reason this tool is useful for the degree.",
+          "description": "Short reason this tool is useful for the discipline.",
           "minLength": 1
         },
         "when": {
@@ -135,7 +135,7 @@
       "properties": {
         "pathPatterns": {
           "type": "array",
-          "description": "Glob-like file path patterns that suggest this degree is relevant.",
+          "description": "Glob-like file path patterns that suggest this discipline is relevant.",
           "items": {
             "type": "string",
             "minLength": 1
@@ -145,7 +145,7 @@
         },
         "commandPatterns": {
           "type": "array",
-          "description": "Regular expression strings for shell commands or tool invocations that suggest this degree is relevant.",
+          "description": "Regular expression strings for shell commands or tool invocations that suggest this discipline is relevant.",
           "items": {
             "type": "string",
             "minLength": 1
@@ -171,7 +171,7 @@
       "properties": {
         "phrases": {
           "type": "array",
-          "description": "Phrases that are strong prompt-level hints for this degree.",
+          "description": "Phrases that are strong prompt-level hints for this discipline.",
           "items": {
             "type": "string",
             "minLength": 1

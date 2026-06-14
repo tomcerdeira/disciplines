@@ -1,6 +1,6 @@
 # Task Resolution Examples
 
-These examples show how a human, the local resolver script, or a future adapter might map a task to a degree. Scores are illustrative.
+These examples show how a human, the local resolver script, or a future adapter might map a task to a discipline. Scores are illustrative.
 
 ## Frontend Task
 
@@ -8,7 +8,7 @@ Task:
 
 > Fix the mobile layout in `SearchResults.tsx` and verify keyboard navigation.
 
-Likely degree: `frontend-engineer`
+Likely discipline: `frontend-engineer`
 
 Why:
 
@@ -18,7 +18,7 @@ Why:
 
 Initial context:
 
-- Frontend degree prompt.
+- Frontend discipline prompt.
 - Frontend, accessibility, and browser-verification skills.
 - Browser and frontend package-manager tools when available.
 
@@ -32,7 +32,7 @@ Task:
 
 > Add a rate limit to the invite creation endpoint and cover it with unit tests.
 
-Likely degree: `backend-engineer`
+Likely discipline: `backend-engineer`
 
 Why:
 
@@ -41,7 +41,7 @@ Why:
 
 Initial context:
 
-- Backend degree prompt.
+- Backend discipline prompt.
 - API design, backend patterns, unit testing, and observability skills.
 - Source-control, test, database, and observability tools when the task needs evidence beyond static code.
 
@@ -55,7 +55,7 @@ Task:
 
 > Analyze this CSV export and chart weekly activation by account segment.
 
-Likely degree: `data-analyst`
+Likely discipline: `data-analyst`
 
 Why:
 
@@ -64,7 +64,7 @@ Why:
 
 Initial context:
 
-- Data degree prompt.
+- Data discipline prompt.
 - Spreadsheet analysis, visualization, SQL analysis, and report-writing skills.
 - Python, spreadsheet, or SQL tools when they make the analysis reproducible.
 
@@ -78,7 +78,7 @@ Task:
 
 > Turn this manual release checklist into a repeatable GitHub Actions workflow.
 
-Likely degree: `automation-engineer`
+Likely discipline: `automation-engineer`
 
 Why:
 
@@ -88,7 +88,7 @@ Why:
 
 Initial context:
 
-- Automation degree prompt.
+- Automation discipline prompt.
 - Workflow automation, CI/CD, shell scripting, and integration-testing skills.
 - Shell, GitHub, CI, and scheduler tools when available.
 
@@ -107,7 +107,7 @@ Likely result: ask the user to choose.
 Why:
 
 - Could mean product research, frontend implementation, backend instrumentation, or data analysis.
-- The resolver should not overfit a vague task to one degree.
+- The resolver should not overfit a vague task to one discipline.
 
 Good follow-up:
 
@@ -119,7 +119,7 @@ Task:
 
 > Fix the settings page save button. It renders correctly, but the API returns 403.
 
-Initial degree: `frontend-engineer`
+Initial discipline: `frontend-engineer`
 
 Expansion:
 
@@ -134,7 +134,7 @@ Task:
 
 > Verify this React modal works on mobile.
 
-Likely degree: `frontend-engineer`
+Likely discipline: `frontend-engineer`
 
 Recommended tool:
 

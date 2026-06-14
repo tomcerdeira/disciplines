@@ -1,4 +1,4 @@
-# Cursor Degree Prelude
+# Cursor Discipline Prelude
 
 Use this as a task-local prompt prelude in Cursor. Do not add it as a permanent project rule unless the user intentionally wants that.
 
@@ -8,7 +8,7 @@ Use this as a task-local prompt prelude in Cursor. Do not add it as a permanent 
 
 Cursor usage rules:
 
-- Treat the selected degree as task-local guidance.
+- Treat the selected discipline as task-local guidance.
 - Inspect the files named by the user and the resolver evidence first.
 - Map recommended tools to what this Cursor workspace actually supports.
 - Use repo instructions for package-manager choice, test commands, and style.

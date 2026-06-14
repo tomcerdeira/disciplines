@@ -4,8 +4,8 @@ import process from "node:process";
 import {
   createResolverBundle,
   formatPromptBundle,
-  loadDegrees,
-} from "./lib/degree-resolver.mjs";
+  loadDisciplines,
+} from "./lib/discipline-resolver.mjs";
 
 function printUsage() {
   console.log(`Usage:
@@ -97,8 +97,8 @@ async function main() {
     },
     commands: args.commands.filter(Boolean),
   };
-  const degrees = await loadDegrees(process.cwd());
-  const bundle = createResolverBundle(input, degrees);
+  const disciplines = await loadDisciplines(process.cwd());
+  const bundle = createResolverBundle(input, disciplines);
 
   if (args.format === "json") {
     console.log(JSON.stringify(bundle, null, 2));

@@ -6,7 +6,7 @@ export function stripJsonComments(source) {
   return source.replace(/^\s*\/\/.*$/gm, "");
 }
 
-export function splitDegreeFile(source, filePath) {
+export function splitDisciplineFile(source, filePath) {
   if (!source.startsWith("---\n")) {
     throw new Error(`${filePath}: missing opening frontmatter delimiter`);
   }
@@ -22,18 +22,18 @@ export function splitDegreeFile(source, filePath) {
   };
 }
 
-export async function loadDegrees(root) {
-  const degreesDir = path.join(root, "degrees");
-  const entries = await readdir(degreesDir, { withFileTypes: true });
+export async function loadDisciplines(root) {
+  const disciplinesDir = path.join(root, "disciplines");
+  const entries = await readdir(disciplinesDir, { withFileTypes: true });
   const packages = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
-  const degrees = [];
+  const disciplines = [];
 
   for (const packageName of packages) {
-    const relativePath = path.join("degrees", packageName, "DEGREE.md");
-    const absolutePath = path.join(degreesDir, packageName, "DEGREE.md");
+    const relativePath = path.join("disciplines", packageName, "DISCIPLINE.md");
+    const absolutePath = path.join(disciplinesDir, packageName, "DISCIPLINE.md");
     const source = await readFile(absolutePath, "utf8");
-    const { frontmatter, body } = splitDegreeFile(source, relativePath);
-    degrees.push({
+    const { frontmatter, body } = splitDisciplineFile(source, relativePath);
+    disciplines.push({
       ...YAML.parse(frontmatter),
       packageId: packageName,
       filePath: relativePath,
@@ -41,7 +41,7 @@ export async function loadDegrees(root) {
     });
   }
 
-  return degrees;
+  return disciplines;
 }
 
 function escapeRegExp(value) {
@@ -72,11 +72,11 @@ function includesPhrase(text, phrase) {
   return text.toLowerCase().includes(phrase.toLowerCase());
 }
 
-export function scoreDegree(input, degree) {
+export function scoreDiscipline(input, discipline) {
   const taskText = input.task ?? "";
   const files = input.repoSignals?.files ?? [];
   const commands = input.commands ?? [];
-  const activation = degree.activation;
+  const activation = discipline.activation;
   const promptSignals = activation.promptSignals;
   const matches = {
     pathPatterns: [],
@@ -129,25 +129,25 @@ export function scoreDegree(input, degree) {
   }
 
   return {
-    degreeId: degree.id,
+    disciplineId: discipline.id,
     minScore: activation.minScore,
     score,
     matches,
   };
 }
 
-export function resolveDegrees(input, degrees) {
-  const scored = degrees
-    .map((degree) => scoreDegree(input, degree))
-    .sort((a, b) => b.score - a.score || a.degreeId.localeCompare(b.degreeId));
+export function resolveDisciplines(input, disciplines) {
+  const scored = disciplines
+    .map((discipline) => scoreDiscipline(input, discipline))
+    .sort((a, b) => b.score - a.score || a.disciplineId.localeCompare(b.disciplineId));
 
   const eligible = scored.filter((result) => result.score >= result.minScore);
   if (eligible.length === 0) {
     const hasWeakSignal = scored.some((result) => result.score > 0);
     return {
       decision: hasWeakSignal ? "ask" : "none",
-      primaryDegree: null,
-      secondaryDegree: null,
+      primaryDiscipline: null,
+      secondaryDiscipline: null,
       scored,
     };
   }
@@ -158,16 +158,16 @@ export function resolveDegrees(input, degrees) {
   if (secondary && secondary.score >= secondary.minScore && secondary.score >= primary.score * 0.6) {
     return {
       decision: "compose",
-      primaryDegree: primary.degreeId,
-      secondaryDegree: secondary.degreeId,
+      primaryDiscipline: primary.disciplineId,
+      secondaryDiscipline: secondary.disciplineId,
       scored,
     };
   }
 
   return {
     decision: "select",
-    primaryDegree: primary.degreeId,
-    secondaryDegree: null,
+    primaryDiscipline: primary.disciplineId,
+    secondaryDiscipline: null,
     scored,
   };
 }
@@ -176,15 +176,15 @@ function unique(values) {
   return [...new Set(values)];
 }
 
-function selectedDegreeEntries(resolution, degrees) {
-  const byId = new Map(degrees.map((degree) => [degree.id, degree]));
-  return [resolution.primaryDegree, resolution.secondaryDegree]
+function selectedDisciplineEntries(resolution, disciplines) {
+  const byId = new Map(disciplines.map((discipline) => [discipline.id, discipline]));
+  return [resolution.primaryDiscipline, resolution.secondaryDiscipline]
     .filter(Boolean)
-    .map((degreeId) => byId.get(degreeId))
+    .map((disciplineId) => byId.get(disciplineId))
     .filter(Boolean);
 }
 
-function degreeReason(score) {
+function disciplineReason(score) {
   const parts = [];
   if (score.matches.pathPatterns.length > 0) parts.push(`paths: ${score.matches.pathPatterns.join(", ")}`);
   if (score.matches.commandPatterns.length > 0) parts.push(`commands: ${score.matches.commandPatterns.join(", ")}`);
@@ -192,25 +192,25 @@ function degreeReason(score) {
   return parts.length > 0 ? parts.join("; ") : "No strong activation signals matched.";
 }
 
-export function createResolverBundle(input, degrees) {
-  const resolution = resolveDegrees(input, degrees);
-  const selectedDegrees = selectedDegreeEntries(resolution, degrees);
-  const scoreByDegree = new Map(resolution.scored.map((score) => [score.degreeId, score]));
-  const includeSkills = unique(selectedDegrees.flatMap((degree) => degree.includeSkills));
+export function createResolverBundle(input, disciplines) {
+  const resolution = resolveDisciplines(input, disciplines);
+  const selectedDisciplines = selectedDisciplineEntries(resolution, disciplines);
+  const scoreByDiscipline = new Map(resolution.scored.map((score) => [score.disciplineId, score]));
+  const includeSkills = unique(selectedDisciplines.flatMap((discipline) => discipline.includeSkills));
   const includeSkillSet = new Set(includeSkills);
-  const softExcludeSkills = unique(selectedDegrees.flatMap((degree) => degree.softExcludeSkills))
+  const softExcludeSkills = unique(selectedDisciplines.flatMap((discipline) => discipline.softExcludeSkills))
     .filter((skillId) => !includeSkillSet.has(skillId));
 
   if (resolution.decision === "none") {
     return {
       decision: "none",
       task: input.task,
-      selectedDegrees: [],
+      selectedDisciplines: [],
       activationMatches: [],
       includeSkills: [],
       recommendedTools: [],
       softExcludeSkills: [],
-      reason: "No available degree reached the activation threshold.",
+      reason: "No available discipline reached the activation threshold.",
       scores: resolution.scored,
     };
   }
@@ -219,12 +219,12 @@ export function createResolverBundle(input, degrees) {
     return {
       decision: "ask",
       task: input.task,
-      question: "Which degree should guide this task?",
-      choices: resolution.scored.slice(0, 3).filter((score) => score.score > 0).map((score) => score.degreeId),
-      reason: "Some activation signals matched, but no degree reached its activation threshold.",
-      selectedDegrees: [],
+      question: "Which discipline should guide this task?",
+      choices: resolution.scored.slice(0, 3).filter((score) => score.score > 0).map((score) => score.disciplineId),
+      reason: "Some activation signals matched, but no discipline reached its activation threshold.",
+      selectedDisciplines: [],
       activationMatches: resolution.scored.slice(0, 3).map((score) => ({
-        degreeId: score.degreeId,
+        disciplineId: score.disciplineId,
         ...score.matches,
       })),
       includeSkills: [],
@@ -237,34 +237,34 @@ export function createResolverBundle(input, degrees) {
   return {
     decision: resolution.decision,
     task: input.task,
-    selectedDegrees: selectedDegrees.map((degree, index) => {
-      const score = scoreByDegree.get(degree.id);
+    selectedDisciplines: selectedDisciplines.map((discipline, index) => {
+      const score = scoreByDiscipline.get(discipline.id);
       return {
-        id: degree.id,
+        id: discipline.id,
         role: index === 0 ? "primary" : "secondary",
         score: score?.score ?? 0,
-        minScore: score?.minScore ?? degree.activation.minScore,
-        reason: score ? degreeReason(score) : "Selected by resolver.",
-        filePath: degree.filePath,
+        minScore: score?.minScore ?? discipline.activation.minScore,
+        reason: score ? disciplineReason(score) : "Selected by resolver.",
+        filePath: discipline.filePath,
       };
     }),
-    activationMatches: selectedDegrees.map((degree) => ({
-      degreeId: degree.id,
-      ...(scoreByDegree.get(degree.id)?.matches ?? {
+    activationMatches: selectedDisciplines.map((discipline) => ({
+      disciplineId: discipline.id,
+      ...(scoreByDiscipline.get(discipline.id)?.matches ?? {
         pathPatterns: [],
         commandPatterns: [],
         promptSignals: [],
       }),
     })),
     includeSkills,
-    recommendedTools: selectedDegrees.flatMap((degree) => degree.recommendedTools),
+    recommendedTools: selectedDisciplines.flatMap((discipline) => discipline.recommendedTools),
     softExcludeSkills,
-    prompts: selectedDegrees.map((degree) => ({
-      degreeId: degree.id,
-      body: degree.body,
+    prompts: selectedDisciplines.map((discipline) => ({
+      disciplineId: discipline.id,
+      body: discipline.body,
     })),
     notes: [
-      "Degrees are advisory. Soft exclusions may be overridden by explicit user request or concrete evidence.",
+      "Disciplines are advisory. Soft exclusions may be overridden by explicit user request or concrete evidence.",
       "Recommended tools are evidence sources, not automatic installation or execution instructions.",
     ],
     scores: resolution.scored,
@@ -289,18 +289,18 @@ function formatTools(tools) {
 export function formatPromptBundle(bundle) {
   if (bundle.decision === "none") {
     return [
-      "# Agent Degree Resolution",
+      "# Agent Discipline Resolution",
       "",
       `Decision: none`,
       `Task: ${bundle.task}`,
       "",
-      "No available degree matched strongly enough. Proceed without a degree or ask whether a new degree should be created.",
+      "No available discipline matched strongly enough. Proceed without a discipline or ask whether a new discipline should be created.",
     ].join("\n");
   }
 
   if (bundle.decision === "ask") {
     return [
-      "# Agent Degree Resolution",
+      "# Agent Discipline Resolution",
       "",
       "Decision: ask",
       `Task: ${bundle.task}`,
@@ -314,20 +314,20 @@ export function formatPromptBundle(bundle) {
     ].join("\n");
   }
 
-  const selected = bundle.selectedDegrees
-    .map((degree) => `- ${degree.id} (${degree.role}, score ${degree.score}/${degree.minScore}): ${degree.reason}`)
+  const selected = bundle.selectedDisciplines
+    .map((discipline) => `- ${discipline.id} (${discipline.role}, score ${discipline.score}/${discipline.minScore}): ${discipline.reason}`)
     .join("\n");
   const prompts = bundle.prompts
-    .map((prompt) => [`## ${prompt.degreeId} Focus Prompt`, "", prompt.body].join("\n"))
+    .map((prompt) => [`## ${prompt.disciplineId} Focus Prompt`, "", prompt.body].join("\n"))
     .join("\n\n");
 
   return [
-    "# Agent Degree Resolution",
+    "# Agent Discipline Resolution",
     "",
     `Decision: ${bundle.decision}`,
     `Task: ${bundle.task}`,
     "",
-    "Selected degrees:",
+    "Selected disciplines:",
     selected,
     "",
     "Included skill ids:",

@@ -4,15 +4,15 @@
 
 Fix keyboard navigation in `SearchResults.tsx` and verify it in browser.
 
-## Degree Decision
+## Discipline Decision
 
 - Decision: `select`
-- Primary degree: `frontend-engineer`
-- Secondary degree: none
+- Primary discipline: `frontend-engineer`
+- Secondary discipline: none
 
-## Degree Prompt
+## Discipline Prompt
 
-You are operating under the Frontend Engineer degree.
+You are operating under the Frontend Engineer discipline.
 
 Prefer UI, interaction, accessibility, visual polish, and browser-verification context. Start with the smallest set of relevant component, styling, and design-system files. Prefer browser and frontend package-manager tools when verifying visible behavior.
 

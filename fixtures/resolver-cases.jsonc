@@ -8,8 +8,8 @@
     "commands": [],
     "expected": {
       "decision": "select",
-      "primaryDegree": "frontend-engineer",
-      "secondaryDegree": null,
+      "primaryDiscipline": "frontend-engineer",
+      "secondaryDiscipline": null,
       "matchedSignals": {
         "pathPatterns": ["**/*.tsx"],
         "commandPatterns": [],
@@ -32,8 +32,8 @@
     "commands": ["bun run typecheck", "bun test src/modules/candidates/model/candidate-keyboard-shortcuts.test.ts"],
     "expected": {
       "decision": "select",
-      "primaryDegree": "frontend-engineer",
-      "secondaryDegree": null,
+      "primaryDiscipline": "frontend-engineer",
+      "secondaryDiscipline": null,
       "matchedSignals": {
         "pathPatterns": ["**/*.tsx", "src/modules/**"],
         "commandPatterns": ["\\b(npm|pnpm|bun|yarn)\\s+run\\s+(dev|build|lint|test|typecheck|check)\\b"],
@@ -51,8 +51,8 @@
     "commands": ["npm run test"],
     "expected": {
       "decision": "select",
-      "primaryDegree": "backend-engineer",
-      "secondaryDegree": null,
+      "primaryDiscipline": "backend-engineer",
+      "secondaryDiscipline": null,
       "matchedSignals": {
         "pathPatterns": ["src/**/api/**"],
         "commandPatterns": ["\\b(npm|pnpm|bun|yarn)\\s+run\\s+(test|typecheck|build)\\b"],
@@ -70,8 +70,8 @@
     "commands": [],
     "expected": {
       "decision": "select",
-      "primaryDegree": "data-analyst",
-      "secondaryDegree": null,
+      "primaryDiscipline": "data-analyst",
+      "secondaryDiscipline": null,
       "matchedSignals": {
         "pathPatterns": ["**/*.csv"],
         "commandPatterns": [],
@@ -89,8 +89,8 @@
     "commands": ["gh workflow list"],
     "expected": {
       "decision": "select",
-      "primaryDegree": "automation-engineer",
-      "secondaryDegree": null,
+      "primaryDiscipline": "automation-engineer",
+      "secondaryDiscipline": null,
       "matchedSignals": {
         "pathPatterns": [".github/workflows/**"],
         "commandPatterns": ["\\bgh\\s+(workflow|run|pr|issue)\\b"],
@@ -111,8 +111,8 @@
     "commands": [],
     "expected": {
       "decision": "compose",
-      "primaryDegree": "frontend-engineer",
-      "secondaryDegree": "backend-engineer",
+      "primaryDiscipline": "frontend-engineer",
+      "secondaryDiscipline": "backend-engineer",
       "matchedSignals": {
         "pathPatterns": ["**/*.tsx", "src/**/api/**"],
         "commandPatterns": [],
@@ -130,8 +130,8 @@
     "commands": [],
     "expected": {
       "decision": "ask",
-      "primaryDegree": null,
-      "secondaryDegree": null,
+      "primaryDiscipline": null,
+      "secondaryDiscipline": null,
       "choices": ["product-researcher", "frontend-engineer", "data-analyst"],
       "question": "Should I treat this as product research, frontend implementation, or analytics work?",
       "matchedSignals": {
@@ -139,11 +139,11 @@
         "commandPatterns": [],
         "promptSignals": []
       },
-      "reason": "The task is too broad and could map to several degrees without stronger evidence."
+      "reason": "The task is too broad and could map to several disciplines without stronger evidence."
     }
   },
   {
-    "name": "no legal degree",
+    "name": "no legal discipline",
     "task": "Draft a legal review checklist for a vendor data-processing agreement.",
     "repoSignals": {
       "files": []
@@ -151,14 +151,14 @@
     "commands": [],
     "expected": {
       "decision": "none",
-      "primaryDegree": null,
-      "secondaryDegree": null,
+      "primaryDiscipline": null,
+      "secondaryDiscipline": null,
       "matchedSignals": {
         "pathPatterns": [],
         "commandPatterns": [],
         "promptSignals": []
       },
-      "reason": "No available degree covers legal review or contract analysis."
+      "reason": "No available discipline covers legal review or contract analysis."
     }
   }
 ]

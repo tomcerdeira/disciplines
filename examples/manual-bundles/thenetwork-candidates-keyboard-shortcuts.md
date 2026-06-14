@@ -7,11 +7,11 @@ In `thenetwork-frontend`, update the desktop `/candidates` view so:
 - `Shift+Tab` moves between candidate status tabs: `new`, `interesting`, and `skipped`.
 - `Shift+ArrowUp` and `Shift+ArrowDown` move between roles.
 
-## Degree Decision
+## Discipline Decision
 
 - Decision: `select`
-- Primary degree: `frontend-engineer`
-- Secondary degree: none
+- Primary discipline: `frontend-engineer`
+- Secondary discipline: none
 - Confidence: high
 
 ## Activation Matches
@@ -27,9 +27,9 @@ In `thenetwork-frontend`, update the desktop `/candidates` view so:
   - `bun test ...`
   - `bun run lint`
 
-## Degree Prompt
+## Discipline Prompt
 
-You are operating under the Frontend Engineer degree.
+You are operating under the Frontend Engineer discipline.
 
 Prefer UI, interaction, accessibility, visual polish, and browser-verification context. Start with the smallest set of relevant component, styling, and design-system files. Prefer browser and frontend package-manager tools when verifying visible behavior.
 
@@ -63,9 +63,9 @@ Load backend or database context only if the shortcut behavior depends on an API
 ## Baseline Observation From Real Run
 
 - The implementation selected the correct local files and used a real browser, `bun test`, `bun run typecheck`, and scoped ESLint.
-- The implementation did not explicitly resolve or announce the degree bundle first.
-- Because the degree was not applied up front, missing or approximate skill mappings were not surfaced before work began.
-- The existing frontend degree recommended `npm`, which was too concrete for a repo whose instructions require `bun`. The degree was updated to recommend a portable `package-manager` instead.
+- The implementation did not explicitly resolve or announce the discipline bundle first.
+- Because the discipline was not applied up front, missing or approximate skill mappings were not surfaced before work began.
+- The existing frontend discipline recommended `npm`, which was too concrete for a repo whose instructions require `bun`. The discipline was updated to recommend a portable `package-manager` instead.
 
 ## What to Observe
 

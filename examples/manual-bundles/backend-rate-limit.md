@@ -4,15 +4,15 @@
 
 Add a rate limit to the invite creation endpoint and cover it with unit tests.
 
-## Degree Decision
+## Discipline Decision
 
 - Decision: `select`
-- Primary degree: `backend-engineer`
-- Secondary degree: none
+- Primary discipline: `backend-engineer`
+- Secondary discipline: none
 
-## Degree Prompt
+## Discipline Prompt
 
-You are operating under the Backend Engineer degree.
+You are operating under the Backend Engineer discipline.
 
 Prefer server-side correctness, data integrity, domain boundaries, operational evidence, and focused tests. Read the code path before proposing broad architecture changes, and keep response-shape, authorization, and persistence contracts explicit. Prefer source-control, test, database, and observability tools when the task needs evidence beyond static code.
 

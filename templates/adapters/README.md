@@ -16,4 +16,4 @@ Templates:
 - [claude-code.md](claude-code.md)
 - [codex.md](codex.md)
 
-Each template preserves the same v1 rules: degrees are advisory, soft exclusions are overrideable with evidence, and recommended tools are not automatically installed or executed.
+Each template preserves the same v1 rules: disciplines are advisory, soft exclusions are overrideable with evidence, and recommended tools are not automatically installed or executed.

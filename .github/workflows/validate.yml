@@ -5,8 +5,8 @@ on:
   pull_request:
 
 jobs:
-  degrees:
-    name: Validate degree packages
+  disciplines:
+    name: Validate discipline packages
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate degrees
+      - name: Validate disciplines
         run: npm run validate
 
       - name: Check resolver fixtures

@@ -6,8 +6,8 @@ import process from "node:process";
 import YAML from "yaml";
 
 const root = process.cwd();
-const schemaPath = path.join(root, "schema", "degree.schema.json");
-const degreesDir = path.join(root, "degrees");
+const schemaPath = path.join(root, "schema", "discipline.schema.json");
+const disciplinesDir = path.join(root, "disciplines");
 const resolverCasesPath = path.join(root, "fixtures", "resolver-cases.jsonc");
 
 const errors = [];
@@ -16,7 +16,7 @@ function fail(message) {
   errors.push(message);
 }
 
-function splitDegreeFile(source, filePath) {
+function splitDisciplineFile(source, filePath) {
   if (!source.startsWith("---\n")) {
     fail(`${filePath}: missing opening frontmatter delimiter`);
     return null;
@@ -90,7 +90,7 @@ function parseJsonc(source, filePath) {
   }
 }
 
-function validateDegree(data, filePath, schema, seenIds) {
+function validateDiscipline(data, filePath, schema, seenIds) {
   const allowedKeys = new Set(Object.keys(schema.properties));
   const requiredKeys = schema.required;
 
@@ -122,7 +122,7 @@ function validateDegree(data, filePath, schema, seenIds) {
   if (typeof data.id === "string") {
     const idPattern = new RegExp(schema.properties.id.pattern);
     if (!idPattern.test(data.id)) fail(`${filePath}: id does not match ${idPattern}`);
-    if (seenIds.has(data.id)) fail(`${filePath}: duplicate degree id ${data.id}`);
+    if (seenIds.has(data.id)) fail(`${filePath}: duplicate discipline id ${data.id}`);
     seenIds.add(data.id);
   }
 
@@ -283,59 +283,59 @@ async function main() {
   try {
     schema = JSON.parse(await readFile(schemaPath, "utf8"));
   } catch (error) {
-    fail(`schema/degree.schema.json: invalid JSON: ${error.message}`);
+    fail(`schema/discipline.schema.json: invalid JSON: ${error.message}`);
   }
 
   if (!schema) return finish();
 
-  const entries = await readdir(degreesDir, { withFileTypes: true });
+  const entries = await readdir(disciplinesDir, { withFileTypes: true });
 
   for (const entry of entries) {
-    if (entry.isFile() && entry.name.endsWith(".degree.md")) {
-      fail(`degrees/${entry.name}: legacy flat degree files are not supported; use degrees/<id>/DEGREE.md`);
+    if (entry.isFile() && entry.name.endsWith(".discipline.md")) {
+      fail(`disciplines/${entry.name}: legacy flat discipline files are not supported; use disciplines/<id>/DISCIPLINE.md`);
     }
   }
 
-  const degreePackages = entries
+  const disciplinePackages = entries
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
 
-  if (degreePackages.length === 0) {
-    fail("degrees/: no degree packages found; expected degrees/<id>/DEGREE.md");
+  if (disciplinePackages.length === 0) {
+    fail("disciplines/: no discipline packages found; expected disciplines/<id>/DISCIPLINE.md");
   }
 
   const seenIds = new Set();
 
-  for (const packageName of degreePackages) {
-    const packagePath = path.join("degrees", packageName);
-    const filePath = path.join(packagePath, "DEGREE.md");
-    const absolutePath = path.join(degreesDir, packageName, "DEGREE.md");
+  for (const packageName of disciplinePackages) {
+    const packagePath = path.join("disciplines", packageName);
+    const filePath = path.join(packagePath, "DISCIPLINE.md");
+    const absolutePath = path.join(disciplinesDir, packageName, "DISCIPLINE.md");
     let source;
 
     try {
       source = await readFile(absolutePath, "utf8");
     } catch (error) {
-      fail(`${packagePath}: missing DEGREE.md entrypoint`);
+      fail(`${packagePath}: missing DISCIPLINE.md entrypoint`);
       continue;
     }
 
-    const parts = splitDegreeFile(source, filePath);
+    const parts = splitDisciplineFile(source, filePath);
     if (!parts) continue;
 
     const data = parseFrontmatterYaml(parts.frontmatter, filePath);
     if (data.id !== packageName) {
       fail(`${filePath}: frontmatter id must match package folder name ${packageName}`);
     }
-    validateDegree(data, filePath, schema, seenIds);
+    validateDiscipline(data, filePath, schema, seenIds);
   }
 
   await validateResolverCases(seenIds);
 
-  finish(degreePackages.length);
+  finish(disciplinePackages.length);
 }
 
-async function validateResolverCases(degreeIds) {
+async function validateResolverCases(disciplineIds) {
   const filePath = path.join("fixtures", "resolver-cases.jsonc");
   let source;
 
@@ -382,7 +382,7 @@ async function validateResolverCases(degreeIds) {
 
     validateRepoSignals(testCase.repoSignals, casePath);
     expectStringArray(testCase, "commands", casePath, { allowEmpty: true });
-    validateExpectedResolverCase(testCase.expected, casePath, decisions, degreeIds);
+    validateExpectedResolverCase(testCase.expected, casePath, decisions, disciplineIds);
   });
 }
 
@@ -400,7 +400,7 @@ function validateRepoSignals(repoSignals, casePath) {
   expectStringArray(repoSignals, "files", `${casePath}: repoSignals`, { allowEmpty: true });
 }
 
-function validateExpectedResolverCase(expected, casePath, decisions, degreeIds) {
+function validateExpectedResolverCase(expected, casePath, decisions, disciplineIds) {
   if (!expected || typeof expected !== "object" || Array.isArray(expected)) {
     fail(`${casePath}: expected must be an object`);
     return;
@@ -408,8 +408,8 @@ function validateExpectedResolverCase(expected, casePath, decisions, degreeIds) 
 
   const allowedKeys = new Set([
     "decision",
-    "primaryDegree",
-    "secondaryDegree",
+    "primaryDiscipline",
+    "secondaryDiscipline",
     "choices",
     "question",
     "matchedSignals",
@@ -424,52 +424,52 @@ function validateExpectedResolverCase(expected, casePath, decisions, degreeIds) 
     fail(`${casePath}: expected.decision must be one of ${Array.from(decisions).join(", ")}`);
   }
 
-  validateOptionalDegreeId(expected.primaryDegree, `${casePath}: expected.primaryDegree`, degreeIds);
-  validateOptionalDegreeId(expected.secondaryDegree, `${casePath}: expected.secondaryDegree`, degreeIds);
+  validateOptionalDisciplineId(expected.primaryDiscipline, `${casePath}: expected.primaryDiscipline`, disciplineIds);
+  validateOptionalDisciplineId(expected.secondaryDiscipline, `${casePath}: expected.secondaryDiscipline`, disciplineIds);
   validateMatchedSignals(expected.matchedSignals, casePath);
   expectString(expected, "reason", `${casePath}: expected`);
 
   if (expected.decision === "select") {
-    if (!expected.primaryDegree) fail(`${casePath}: select cases must set expected.primaryDegree`);
-    if (expected.secondaryDegree !== null) fail(`${casePath}: select cases must set expected.secondaryDegree to null`);
+    if (!expected.primaryDiscipline) fail(`${casePath}: select cases must set expected.primaryDiscipline`);
+    if (expected.secondaryDiscipline !== null) fail(`${casePath}: select cases must set expected.secondaryDiscipline to null`);
   }
 
   if (expected.decision === "compose") {
-    if (!expected.primaryDegree) fail(`${casePath}: compose cases must set expected.primaryDegree`);
-    if (!expected.secondaryDegree) fail(`${casePath}: compose cases must set expected.secondaryDegree`);
+    if (!expected.primaryDiscipline) fail(`${casePath}: compose cases must set expected.primaryDiscipline`);
+    if (!expected.secondaryDiscipline) fail(`${casePath}: compose cases must set expected.secondaryDiscipline`);
   }
 
   if (expected.decision === "ask") {
-    if (expected.primaryDegree !== null) fail(`${casePath}: ask cases must set expected.primaryDegree to null`);
-    if (expected.secondaryDegree !== null) fail(`${casePath}: ask cases must set expected.secondaryDegree to null`);
+    if (expected.primaryDiscipline !== null) fail(`${casePath}: ask cases must set expected.primaryDiscipline to null`);
+    if (expected.secondaryDiscipline !== null) fail(`${casePath}: ask cases must set expected.secondaryDiscipline to null`);
     expectStringArray(expected, "choices", `${casePath}: expected`);
     expectString(expected, "question", `${casePath}: expected`);
 
     if (Array.isArray(expected.choices)) {
-      expected.choices.forEach((degreeId, choiceIndex) => {
-        if (!degreeIds.has(degreeId)) {
-          fail(`${casePath}: expected.choices[${choiceIndex}] references unknown degree ${degreeId}`);
+      expected.choices.forEach((disciplineId, choiceIndex) => {
+        if (!disciplineIds.has(disciplineId)) {
+          fail(`${casePath}: expected.choices[${choiceIndex}] references unknown discipline ${disciplineId}`);
         }
       });
     }
   }
 
   if (expected.decision === "none") {
-    if (expected.primaryDegree !== null) fail(`${casePath}: none cases must set expected.primaryDegree to null`);
-    if (expected.secondaryDegree !== null) fail(`${casePath}: none cases must set expected.secondaryDegree to null`);
+    if (expected.primaryDiscipline !== null) fail(`${casePath}: none cases must set expected.primaryDiscipline to null`);
+    if (expected.secondaryDiscipline !== null) fail(`${casePath}: none cases must set expected.secondaryDiscipline to null`);
   }
 }
 
-function validateOptionalDegreeId(value, fieldPath, degreeIds) {
+function validateOptionalDisciplineId(value, fieldPath, disciplineIds) {
   if (value === null) return;
 
   if (typeof value !== "string" || value.trim() === "") {
-    fail(`${fieldPath} must be a degree id string or null`);
+    fail(`${fieldPath} must be a discipline id string or null`);
     return;
   }
 
-  if (!degreeIds.has(value)) {
-    fail(`${fieldPath} references unknown degree ${value}`);
+  if (!disciplineIds.has(value)) {
+    fail(`${fieldPath} references unknown discipline ${value}`);
   }
 }
 
@@ -491,12 +491,12 @@ function validateMatchedSignals(matchedSignals, casePath) {
 
 function finish(count = 0) {
   if (errors.length > 0) {
-    console.error(`Degree validation failed with ${errors.length} error(s):`);
+    console.error(`Discipline validation failed with ${errors.length} error(s):`);
     for (const error of errors) console.error(`- ${error}`);
     process.exit(1);
   }
 
-  console.log(`Degree validation passed (${count} degree packages).`);
+  console.log(`Discipline validation passed (${count} discipline packages).`);
 }
 
 main().catch((error) => {

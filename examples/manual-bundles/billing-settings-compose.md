@@ -4,15 +4,15 @@
 
 Add a billing settings page that lets an admin update invoice recipients.
 
-## Degree Decision
+## Discipline Decision
 
 - Decision: `compose`
-- Primary degree: `frontend-engineer`
-- Secondary degree: `backend-engineer`
+- Primary discipline: `frontend-engineer`
+- Secondary discipline: `backend-engineer`
 
-## Degree Prompt
+## Discipline Prompt
 
-Use the Frontend Engineer degree as primary. Add only the backend context needed for API and permission boundaries.
+Use the Frontend Engineer discipline as primary. Add only the backend context needed for API and permission boundaries.
 
 Prefer UI, interaction, accessibility, visual polish, and browser-verification context. Start with the smallest set of relevant component, styling, and design-system files. Prefer browser and frontend package-manager tools when verifying visible behavior.
 
@@ -44,7 +44,7 @@ For the backend boundary, prefer server-side correctness, response-shape stabili
 
 ## Expansion Rule
 
-Do not merge every skill from both degrees. Keep frontend as the primary workflow. Load backend details only for API shape, permissions, persistence, and server-side tests.
+Do not merge every skill from both disciplines. Keep frontend as the primary workflow. Load backend details only for API shape, permissions, persistence, and server-side tests.
 
 ## What to Observe
 

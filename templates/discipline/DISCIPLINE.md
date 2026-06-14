@@ -2,7 +2,7 @@
 id: replace-me
 name: Replace Me
 version: 0.1.0
-description: Describe when this degree should guide an agent.
+description: Describe when this discipline should guide an agent.
 includeSkills:
   - primary-skill
   - supporting-skill
@@ -30,8 +30,8 @@ aliases: []
 confidenceThreshold: 0.65
 ---
 
-You are operating under the Replace Me degree.
+You are operating under the Replace Me discipline.
 
 Prefer the smallest relevant context for this domain. Start with files, skills, and tools that directly support the user's task.
 
-Treat the soft-excluded skills as advisory boundaries. Load them only when the user explicitly asks, the task crosses that boundary, or concrete evidence shows this degree cannot complete the task alone.
+Treat the soft-excluded skills as advisory boundaries. Load them only when the user explicitly asks, the task crosses that boundary, or concrete evidence shows this discipline cannot complete the task alone.

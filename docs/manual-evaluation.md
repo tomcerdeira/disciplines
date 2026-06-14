@@ -1,16 +1,16 @@
 # Manual Evaluation
 
-Use this playbook to test degrees in real agent sessions before building runtime adapters.
+Use this playbook to test disciplines in real agent sessions before building runtime adapters.
 
-The goal is to compare normal agent behavior against degree-guided behavior on real tasks. This is not a benchmark; use either the manual bundles or `npm run resolve -- ...` as the degree-guided input.
+The goal is to compare normal agent behavior against discipline-guided behavior on real tasks. This is not a benchmark; use either the manual bundles or `npm run resolve -- ...` as the discipline-guided input.
 
 ## What to Test
 
 Pick two or three real tasks that you would naturally give an agent:
 
-- A clear single-degree task.
+- A clear single-discipline task.
 - A task where recommended tools matter.
-- A cross-boundary task where two degrees may compose.
+- A cross-boundary task where two disciplines may compose.
 
 This repo includes ready-to-use bundles:
 
@@ -35,7 +35,7 @@ Record:
 - Whether the agent asks a useful clarifying question.
 - Whether the agent proposes reasonable verification.
 
-### Pass B: Degree-Guided
+### Pass B: Discipline-Guided
 
 Give the same task plus the matching manual bundle or the output of `npm run resolve -- ...`.
 
@@ -46,13 +46,13 @@ Record:
 - Whether recommended tools are relevant.
 - Whether soft exclusions keep unrelated context out.
 - Whether the agent expands past soft exclusions only with evidence.
-- Whether the degree prompt over-constrains the agent.
+- Whether the discipline prompt over-constrains the agent.
 
 ## Evaluation Table
 
 Use this table after each run:
 
-| Task | Baseline first plan | Degree first plan | Better first plan? | Context bloat reduced? | Tool choice improved? | Bad exclusion? | Metadata changes |
+| Task | Baseline first plan | Discipline first plan | Better first plan? | Context bloat reduced? | Tool choice improved? | Bad exclusion? | Metadata changes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Frontend keyboard navigation |  |  |  |  |  |  |  |
 | TheNetwork candidates keyboard shortcuts |  |  |  |  |  |  |  |
@@ -61,17 +61,17 @@ Use this table after each run:
 
 ## What Counts as Success
 
-A degree is helping when:
+A discipline is helping when:
 
 - The first plan starts closer to the intended domain.
 - The agent names fewer unrelated skills or systems.
 - Tool recommendations map to the evidence needed for the task.
 - Soft exclusions reduce noise without blocking useful expansion.
-- The agent can explain why it expands into a secondary degree.
+- The agent can explain why it expands into a secondary discipline.
 
 ## What Counts as Failure
 
-A degree needs tuning when:
+A discipline needs tuning when:
 
 - It selects the wrong domain from clear evidence.
 - It hides or discourages context that the task obviously needs.
@@ -81,7 +81,7 @@ A degree needs tuning when:
 
 ## After the Run
 
-Update degree metadata, not the task, when the task exposes a real mismatch:
+Update discipline metadata, not the task, when the task exposes a real mismatch:
 
 - Add or remove `activation.pathPatterns`.
 - Add or remove `activation.commandPatterns`.

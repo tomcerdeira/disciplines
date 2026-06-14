@@ -1,9 +1,9 @@
 [
-  // Select one primary degree when the task has strong direct evidence.
+  // Select one primary discipline when the task has strong direct evidence.
   {
     "decision": "select",
     "task": "Fix keyboard navigation in SearchResults.tsx and verify it in browser.",
-    "selectedDegrees": [
+    "selectedDisciplines": [
       {
         "id": "frontend-engineer",
         "role": "primary",
@@ -13,7 +13,7 @@
     ],
     "activationMatches": [
       {
-        "degreeId": "frontend-engineer",
+        "disciplineId": "frontend-engineer",
         "pathPatterns": ["**/*.tsx"],
         "commandPatterns": [],
         "promptSignals": ["TSX files", "keyboard navigation", "browser verification"]
@@ -48,17 +48,17 @@
       "infrastructure-deployments",
       "data-pipelines"
     ],
-    "prompt": "You are operating under the Frontend Engineer degree.",
+    "prompt": "You are operating under the Frontend Engineer discipline.",
     "notes": [
       "Backend and database context should stay out unless the UI bug crosses an API boundary."
     ]
   },
 
-  // Compose degrees when the task crosses a concrete boundary.
+  // Compose disciplines when the task crosses a concrete boundary.
   {
     "decision": "compose",
     "task": "Add a billing settings page that lets an admin update invoice recipients.",
-    "selectedDegrees": [
+    "selectedDisciplines": [
       {
         "id": "frontend-engineer",
         "role": "primary",
@@ -74,13 +74,13 @@
     ],
     "activationMatches": [
       {
-        "degreeId": "frontend-engineer",
+        "disciplineId": "frontend-engineer",
         "pathPatterns": [],
         "commandPatterns": [],
         "promptSignals": ["settings page"]
       },
       {
-        "degreeId": "backend-engineer",
+        "disciplineId": "backend-engineer",
         "pathPatterns": [],
         "commandPatterns": [],
         "promptSignals": ["API", "permission"]
@@ -124,10 +124,10 @@
       "presentation-design",
       "spreadsheet-formatting"
     ],
-    "prompt": "Use the Frontend Engineer degree as primary. Add only the backend context needed for API and permission boundaries.",
+    "prompt": "Use the Frontend Engineer discipline as primary. Add only the backend context needed for API and permission boundaries.",
     "notes": [
-      "Do not merge every skill from both degrees.",
-      "The backend degree is secondary because the user-facing workflow is the main surface."
+      "Do not merge every skill from both disciplines.",
+      "The backend discipline is secondary because the user-facing workflow is the main surface."
     ]
   },
 
@@ -141,24 +141,24 @@
       "frontend-engineer",
       "data-analyst"
     ],
-    "reason": "The task is broad and could map to several degrees without stronger evidence.",
+    "reason": "The task is broad and could map to several disciplines without stronger evidence.",
     "notes": [
-      "Do not select a degree just because onboarding is vaguely product-related."
+      "Do not select a discipline just because onboarding is vaguely product-related."
     ]
   },
 
-  // Return none when the available degrees do not fit the task.
+  // Return none when the available disciplines do not fit the task.
   {
     "decision": "none",
     "task": "Draft a legal review checklist for a vendor data-processing agreement.",
-    "selectedDegrees": [],
+    "selectedDisciplines": [],
     "includeSkills": [],
     "recommendedTools": [],
     "softExcludeSkills": [],
-    "reason": "No available degree covers legal review or contract analysis.",
+    "reason": "No available discipline covers legal review or contract analysis.",
     "fallback": {
       "mode": "prompt-only",
-      "guidance": "Proceed without a degree, state that no matching degree exists, and ask whether the user wants to add a legal or compliance degree."
+      "guidance": "Proceed without a discipline, state that no matching discipline exists, and ask whether the user wants to add a legal or compliance discipline."
     }
   }
 ]

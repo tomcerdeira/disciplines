@@ -11,12 +11,12 @@ import { promisify } from "node:util";
 import {
   createResolverBundle,
   formatPromptBundle,
-  loadDegrees,
-} from "./lib/degree-resolver.mjs";
+  loadDisciplines,
+} from "./lib/discipline-resolver.mjs";
 
 const execFileAsync = promisify(execFile);
 const AGENTS = ["claude-code", "codex", "cursor"];
-const STORE_DIR = path.join(os.homedir(), ".agent-degrees", "sources");
+const STORE_DIR = path.join(os.homedir(), ".agent-disciplines", "sources");
 
 function usage() {
   console.log(`Usage:
@@ -25,14 +25,14 @@ function usage() {
   disciplines add <source> [--agent claude-code|codex|cursor|*] [--global|--project] [--copy] [--yes] [--list]
 
 Sources:
-  ./agent-degrees
-  https://github.com/tomcerdeira/agent-degrees
-  tomcerdeira/agent-degrees
+  ./agent-disciplines
+  https://github.com/tomcerdeira/agent-disciplines
+  tomcerdeira/agent-disciplines
 
 Examples:
   disciplines list .
   disciplines use . --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
-  disciplines add tomcerdeira/agent-degrees --agent claude-code --global --yes
+  disciplines add tomcerdeira/agent-disciplines --agent claude-code --global --yes
   disciplines add . --agent cursor --project --yes
 `);
 }
@@ -158,7 +158,7 @@ async function resolveSource(source, { persistent = false, copy = false } = {}) 
 
   const githubUrl = githubUrlFromSource(source);
   if (githubUrl) {
-    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "degrees-source-"));
+    const tempRoot = await mkdtemp(path.join(os.tmpdir(), "disciplines-source-"));
     const target = path.join(tempRoot, sourceSlug(source));
     await execFileAsync("git", ["clone", "--depth", "1", githubUrl, target], { stdio: "ignore" });
     return target;
@@ -193,33 +193,33 @@ async function renderTemplate(sourceRoot, relativePath, replacements = {}) {
   return output;
 }
 
-function renderMetaSkill(template, sourceRoot, name = "agent-degrees") {
+function renderMetaSkill(template, sourceRoot, name = "agent-disciplines") {
   let output = template;
   output = output.replace(/^name: .+$/m, `name: ${name}`);
-  if (name === "degree") {
+  if (name === "discipline") {
     output = output.replace(
       /^description: .+$/m,
-      "description: Resolve a task against local agent-degrees before non-trivial work. Use when the user invokes /degree, asks to use degrees, asks which degree applies, invokes agent-degrees, or when repo instructions say to run degree preflight.",
+      "description: Resolve a task against local agent-disciplines before non-trivial work. Use when the user invokes /discipline, asks to use disciplines, asks which discipline applies, invokes agent-disciplines, or when repo instructions say to run discipline preflight.",
     );
   }
   output = output.replace(
-    "If the repo path is not known, use `$AGENT_DEGREES_HOME` when set. Otherwise ask the user for the path or proceed without degree resolution.",
-    `On this machine, use \`${sourceRoot}\`. If the user overrides it, use \`$AGENT_DEGREES_HOME\` instead.`,
+    "If the repo path is not known, use `$AGENT_DISCIPLINES_HOME` when set. Otherwise ask the user for the path or proceed without discipline resolution.",
+    `On this machine, use \`${sourceRoot}\`. If the user overrides it, use \`$AGENT_DISCIPLINES_HOME\` instead.`,
   );
   output = output.replaceAll(
-    'npm --prefix "$AGENT_DEGREES_HOME" run resolve',
-    `npm --prefix "\${AGENT_DEGREES_HOME:-${sourceRoot}}" run resolve`,
+    'npm --prefix "$AGENT_DISCIPLINES_HOME" run resolve',
+    `npm --prefix "\${AGENT_DISCIPLINES_HOME:-${sourceRoot}}" run resolve`,
   );
   return output;
 }
 
-function renderDegreeCommand(sourceRoot) {
+function renderDisciplineCommand(sourceRoot) {
   return `---
-description: Resolve a task with agent-degrees and return the selected degree prelude
+description: Resolve a task with agent-disciplines and return the selected discipline prelude
 argument-hint: <task>
 ---
 
-Resolve this task with agent-degrees before doing implementation work:
+Resolve this task with agent-disciplines before doing implementation work:
 
 Task:
 $ARGUMENTS
@@ -232,7 +232,7 @@ npm --prefix "${sourceRoot}" run resolve -- --task "$ARGUMENTS"
 
 If relevant files, commands, logs, or errors are already known, include them as \`--file\` and \`--command\` arguments.
 
-Return the resolver output first, then proceed with the task under the selected degree. If the resolver returns \`ask\`, ask the user to choose. If it returns \`none\`, proceed without a degree and mention that no degree matched.
+Return the resolver output first, then proceed with the task under the selected discipline. If the resolver returns \`ask\`, ask the user to choose. If it returns \`none\`, proceed without a discipline and mention that no discipline matched.
 `;
 }
 
@@ -263,58 +263,58 @@ function projectRoot() {
 }
 
 async function installClaudeCode(sourceRoot, scope, options) {
-  const metaTemplate = await renderTemplate(sourceRoot, "templates/meta-skill/agent-degrees/SKILL.md");
-  const commandTemplate = renderDegreeCommand(sourceRoot);
+  const metaTemplate = await renderTemplate(sourceRoot, "templates/meta-skill/agent-disciplines/SKILL.md");
+  const commandTemplate = renderDisciplineCommand(sourceRoot);
 
   if (scope === "global") {
     await writeManagedFile(
-      path.join(os.homedir(), ".claude", "skills", "agent-degrees", "SKILL.md"),
-      renderMetaSkill(metaTemplate, sourceRoot, "agent-degrees"),
+      path.join(os.homedir(), ".claude", "skills", "agent-disciplines", "SKILL.md"),
+      renderMetaSkill(metaTemplate, sourceRoot, "agent-disciplines"),
       options,
     );
     await writeManagedFile(
-      path.join(os.homedir(), ".claude", "skills", "degree", "SKILL.md"),
-      renderMetaSkill(metaTemplate, sourceRoot, "degree"),
+      path.join(os.homedir(), ".claude", "skills", "discipline", "SKILL.md"),
+      renderMetaSkill(metaTemplate, sourceRoot, "discipline"),
       options,
     );
-    await writeManagedFile(path.join(os.homedir(), ".claude", "commands", "degree.md"), commandTemplate, options);
+    await writeManagedFile(path.join(os.homedir(), ".claude", "commands", "discipline.md"), commandTemplate, options);
     return;
   }
 
   await writeManagedFile(path.join(projectRoot(), "CLAUDE.md"), await renderTemplate(sourceRoot, "templates/repo-instructions/CLAUDE.md", {
-    "<AGENT_DEGREES_REPO>": sourceRoot,
+    "<AGENT_DISCIPLINES_REPO>": sourceRoot,
   }), options);
-  await writeManagedFile(path.join(projectRoot(), ".claude", "commands", "degree.md"), commandTemplate, options);
+  await writeManagedFile(path.join(projectRoot(), ".claude", "commands", "discipline.md"), commandTemplate, options);
 }
 
 async function installCodex(sourceRoot, scope, options) {
-  const metaTemplate = await renderTemplate(sourceRoot, "templates/meta-skill/agent-degrees/SKILL.md");
-  const renderedSkill = renderMetaSkill(metaTemplate, sourceRoot, "agent-degrees");
+  const metaTemplate = await renderTemplate(sourceRoot, "templates/meta-skill/agent-disciplines/SKILL.md");
+  const renderedSkill = renderMetaSkill(metaTemplate, sourceRoot, "agent-disciplines");
 
   if (scope === "global") {
-    await writeManagedFile(path.join(os.homedir(), ".codex", "skills", "agent-degrees", "SKILL.md"), renderedSkill, options);
-    await writeManagedFile(path.join(os.homedir(), ".agents", "skills", "agent-degrees", "SKILL.md"), renderedSkill, options);
+    await writeManagedFile(path.join(os.homedir(), ".codex", "skills", "agent-disciplines", "SKILL.md"), renderedSkill, options);
+    await writeManagedFile(path.join(os.homedir(), ".agents", "skills", "agent-disciplines", "SKILL.md"), renderedSkill, options);
     return;
   }
 
   await writeManagedFile(path.join(projectRoot(), "AGENTS.md"), await renderTemplate(sourceRoot, "templates/repo-instructions/AGENTS.md", {
-    "<AGENT_DEGREES_REPO>": sourceRoot,
+    "<AGENT_DISCIPLINES_REPO>": sourceRoot,
   }), options);
 }
 
 async function installCursor(sourceRoot, scope, options) {
   const content = await renderTemplate(sourceRoot, "templates/repo-instructions/cursor-rule.md", {
-    "<AGENT_DEGREES_REPO>": sourceRoot,
+    "<AGENT_DISCIPLINES_REPO>": sourceRoot,
   });
   const base = scope === "global" ? path.join(os.homedir(), ".cursor") : path.join(projectRoot(), ".cursor");
-  await writeManagedFile(path.join(base, "rules", "agent-degrees.mdc"), content, options);
+  await writeManagedFile(path.join(base, "rules", "agent-disciplines.mdc"), content, options);
 }
 
 async function commandList(source) {
   const sourceRoot = await resolveSource(source ?? ".", { persistent: false });
-  const degrees = await loadDegrees(sourceRoot);
-  for (const degree of degrees) {
-    console.log(`${degree.id}\t${degree.name}\t${degree.description}`);
+  const disciplines = await loadDisciplines(sourceRoot);
+  for (const discipline of disciplines) {
+    console.log(`${discipline.id}\t${discipline.name}\t${discipline.description}`);
   }
 }
 
@@ -323,12 +323,12 @@ async function commandUse(source, options) {
   if (!["prompt", "json"].includes(options.format)) throw new Error("--format must be prompt or json");
 
   const sourceRoot = await resolveSource(source, { persistent: false });
-  const degrees = await loadDegrees(sourceRoot);
+  const disciplines = await loadDisciplines(sourceRoot);
   const bundle = createResolverBundle({
     task: options.task,
     repoSignals: { files: options.files.filter(Boolean) },
     commands: options.commands.filter(Boolean),
-  }, degrees);
+  }, disciplines);
 
   if (options.format === "json") {
     console.log(JSON.stringify(bundle, null, 2));

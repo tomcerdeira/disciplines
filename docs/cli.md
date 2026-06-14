@@ -1,6 +1,6 @@
 # Disciplines CLI
 
-The `disciplines` CLI is a thin installer and resolver wrapper for degree packages. It keeps v1 advisory: it writes invocation files when asked, runs the local resolver, and prints degree guidance. It does not hide skills, enforce exclusions, install MCP servers, or install CLIs.
+The `disciplines` CLI is a thin installer and resolver wrapper for discipline packages. It keeps v1 advisory: it writes invocation files when asked, runs the local resolver, and prints discipline guidance. It does not hide skills, enforce exclusions, install MCP servers, or install CLIs.
 
 ## Commands
 
@@ -14,8 +14,8 @@ disciplines add <source> [--agent claude-code|codex|cursor|*] [--global|--projec
 
 ```sh
 disciplines list .
-disciplines list https://github.com/tomcerdeira/agent-degrees
-disciplines list tomcerdeira/agent-degrees
+disciplines list https://github.com/tomcerdeira/agent-disciplines
+disciplines list tomcerdeira/agent-disciplines
 ```
 
 ## Resolve a Task
@@ -29,14 +29,14 @@ disciplines use . \
   --command "bun run typecheck"
 ```
 
-The output is a task-local bundle with the selected degree, score evidence, included skill ids, recommended tools, soft exclusions, and the degree focus prompt. Use `--format json` when an adapter or script needs structured output.
+The output is a task-local bundle with the selected discipline, score evidence, included skill ids, recommended tools, soft exclusions, and the discipline focus prompt. Use `--format json` when an adapter or script needs structured output.
 
 ## Install Invocation Glue
 
-Use `disciplines add` when you want agents to discover degree preflight without manually copying templates.
+Use `disciplines add` when you want agents to discover discipline preflight without manually copying templates.
 
 ```sh
-disciplines add tomcerdeira/agent-degrees --agent claude-code --global --yes
+disciplines add tomcerdeira/agent-disciplines --agent claude-code --global --yes
 disciplines add . --agent codex --project --yes
 disciplines add . --agent cursor --project --yes
 disciplines add . --agent '*' --global --project --yes
@@ -44,7 +44,7 @@ disciplines add . --agent '*' --global --project --yes
 
 Supported agents:
 
-- `claude-code`: writes Claude Code skill and `/degree` command files.
+- `claude-code`: writes Claude Code skill and `/discipline` command files.
 - `codex`: writes Codex-compatible skill files and project instructions.
 - `cursor`: writes Cursor rule files.
 - `*`: installs every supported adapter.
@@ -57,9 +57,9 @@ Scopes:
 
 Source handling:
 
-- GitHub sources are cloned into `~/.agent-degrees/sources/`.
+- GitHub sources are cloned into `~/.agent-disciplines/sources/`.
 - Local sources are referenced in place by default.
-- `--copy` copies a local source into `~/.agent-degrees/sources/` and reuses an existing cached copy if present.
+- `--copy` copies a local source into `~/.agent-disciplines/sources/` and reuses an existing cached copy if present.
 
 Overwrite behavior:
 
@@ -72,7 +72,7 @@ Overwrite behavior:
 Use `--list` with `add` to inspect a source before writing adapter files:
 
 ```sh
-disciplines add tomcerdeira/agent-degrees --list
+disciplines add tomcerdeira/agent-disciplines --list
 ```
 
-This resolves the source and lists the available degree packages.
+This resolves the source and lists the available discipline packages.

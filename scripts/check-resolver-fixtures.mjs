@@ -4,10 +4,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import {
-  loadDegrees,
-  resolveDegrees,
+  loadDisciplines,
+  resolveDisciplines,
   stripJsonComments,
-} from "./lib/degree-resolver.mjs";
+} from "./lib/discipline-resolver.mjs";
 
 const root = process.cwd();
 const resolverCasesPath = path.join(root, "fixtures", "resolver-cases.jsonc");
@@ -17,29 +17,29 @@ async function loadCases() {
   return JSON.parse(stripJsonComments(source));
 }
 
-function expectedDegreesMatch(actual, expected) {
+function expectedDisciplinesMatch(actual, expected) {
   return (
     actual.decision === expected.decision &&
-    actual.primaryDegree === expected.primaryDegree &&
-    actual.secondaryDegree === expected.secondaryDegree
+    actual.primaryDiscipline === expected.primaryDiscipline &&
+    actual.secondaryDiscipline === expected.secondaryDiscipline
   );
 }
 
 function formatTopScores(scored) {
   return scored
     .slice(0, 3)
-    .map((result) => `${result.degreeId}:${result.score}`)
+    .map((result) => `${result.disciplineId}:${result.score}`)
     .join(", ");
 }
 
 async function main() {
-  const degrees = await loadDegrees(root);
+  const disciplines = await loadDisciplines(root);
   const cases = await loadCases();
   const failures = [];
 
   for (const testCase of cases) {
-    const actual = resolveDegrees(testCase, degrees);
-    const pass = expectedDegreesMatch(actual, testCase.expected);
+    const actual = resolveDisciplines(testCase, disciplines);
+    const pass = expectedDisciplinesMatch(actual, testCase.expected);
 
     if (pass) {
       console.log(`PASS ${testCase.name} -> ${actual.decision}`);
@@ -53,8 +53,8 @@ async function main() {
     });
 
     console.error(`FAIL ${testCase.name}`);
-    console.error(`  expected: ${testCase.expected.decision} ${testCase.expected.primaryDegree ?? "-"} ${testCase.expected.secondaryDegree ?? "-"}`);
-    console.error(`  actual:   ${actual.decision} ${actual.primaryDegree ?? "-"} ${actual.secondaryDegree ?? "-"}`);
+    console.error(`  expected: ${testCase.expected.decision} ${testCase.expected.primaryDiscipline ?? "-"} ${testCase.expected.secondaryDiscipline ?? "-"}`);
+    console.error(`  actual:   ${actual.decision} ${actual.primaryDiscipline ?? "-"} ${actual.secondaryDiscipline ?? "-"}`);
     console.error(`  scores:   ${formatTopScores(actual.scored)}`);
   }
 
