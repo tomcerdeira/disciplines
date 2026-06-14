@@ -20,6 +20,7 @@ Initial context:
 
 - Frontend degree prompt.
 - Frontend, accessibility, and browser-verification skills.
+- Browser and frontend package-manager tools when available.
 
 Soft exclusions:
 
@@ -42,6 +43,7 @@ Initial context:
 
 - Backend degree prompt.
 - API design, backend patterns, unit testing, and observability skills.
+- Source-control, test, database, and observability tools when the task needs evidence beyond static code.
 
 Soft exclusions:
 
@@ -64,6 +66,7 @@ Initial context:
 
 - Data degree prompt.
 - Spreadsheet analysis, visualization, SQL analysis, and report-writing skills.
+- Python, spreadsheet, or SQL tools when they make the analysis reproducible.
 
 Soft exclusions:
 
@@ -87,6 +90,7 @@ Initial context:
 
 - Automation degree prompt.
 - Workflow automation, CI/CD, shell scripting, and integration-testing skills.
+- Shell, GitHub, CI, and scheduler tools when available.
 
 Soft exclusions:
 
@@ -123,3 +127,22 @@ Expansion:
 - State why: the task crossed from UI behavior into authorization failure evidence.
 
 Soft exclusions still helped because backend context was not loaded until the task justified it.
+
+## Missing Recommended Tool
+
+Task:
+
+> Verify this React modal works on mobile.
+
+Likely degree: `frontend-engineer`
+
+Recommended tool:
+
+- `browser`
+
+If the browser MCP is not available:
+
+- Do not install or configure it automatically.
+- Say that browser verification is recommended but unavailable.
+- Fall back to code inspection and any available local test commands.
+- Ask before adding a new MCP, package, or CLI dependency.

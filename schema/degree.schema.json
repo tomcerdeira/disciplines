@@ -12,6 +12,7 @@
     "description",
     "includeSkills",
     "softExcludeSkills",
+    "recommendedTools",
     "activationHints"
   ],
   "properties": {
@@ -54,6 +55,14 @@
       "uniqueItems": true,
       "default": []
     },
+    "recommendedTools": {
+      "type": "array",
+      "description": "Advisory tools that are usually useful for this degree, such as MCP servers, CLIs, package managers, browsers, or data tools.",
+      "items": {
+        "$ref": "#/$defs/toolRecommendation"
+      },
+      "default": []
+    },
     "activationHints": {
       "type": "array",
       "description": "Natural-language hints, file patterns, tools, or domain phrases that suggest this degree is relevant.",
@@ -91,6 +100,39 @@
       "type": "string",
       "description": "Portable skill reference. Runtime adapters may map this to local skill names.",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "toolRecommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "purpose"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable portable tool id. Runtime adapters may map this to local tool names.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$",
+          "examples": ["browser", "github", "gh"]
+        },
+        "kind": {
+          "type": "string",
+          "description": "Broad tool category.",
+          "enum": ["mcp", "cli", "browser", "package-manager", "runtime", "service", "other"]
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Short reason this tool is useful for the degree.",
+          "minLength": 1
+        },
+        "when": {
+          "type": "string",
+          "description": "Optional activation guidance for this tool.",
+          "minLength": 1
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Whether the tool is helpful but not expected to be available.",
+          "default": true
+        }
+      }
     }
   }
 }

@@ -20,6 +20,7 @@ Degrees provide a portable curation layer above skills. They describe which skil
 - **Degree**: A named capability profile for an agent, stored as a `.degree.md` file.
 - **Skill**: A runtime-specific instruction bundle, tool guide, or reusable workflow that a degree can reference by id.
 - **Included skill**: A skill that belongs in the initial context bundle for the degree.
+- **Recommended tool**: An advisory tool reference, such as an MCP server, CLI, browser, package manager, runtime, or external service.
 - **Soft exclusion**: A skill or skill family that should not be loaded by default, but may be loaded when explicitly requested or supported by concrete task evidence.
 - **Activation hint**: A phrase, file pattern, tool name, or domain signal that helps map a user task to a degree.
 - **Focus prompt**: The markdown body of the degree file. It tells the agent how to behave while operating under that degree.
@@ -42,6 +43,14 @@ includeSkills:
 softExcludeSkills:
   - backend-patterns
   - database-migrations
+recommendedTools:
+  - id: browser
+    kind: mcp
+    purpose: Verify UI behavior in a real browser.
+    when: Use after visible UI changes or when debugging browser-only behavior.
+  - id: npm
+    kind: package-manager
+    purpose: Run frontend scripts and package checks.
 activationHints:
   - TSX files
   - layout and styling
@@ -61,8 +70,9 @@ The portable schema lives at [schema/degree.schema.json](schema/degree.schema.js
 2. The agent, user, or future resolver compares the task with degree `activationHints`.
 3. The best matching degree is selected. If confidence is low, the agent asks the user to choose.
 4. The agent loads the degree focus prompt and the degree's `includeSkills`.
-5. The agent treats `softExcludeSkills` as advisory boundaries, not hard blocks.
-6. If direct evidence appears, the agent may load an excluded or adjacent skill and should state why.
+5. The agent considers `recommendedTools` when a task needs MCPs, CLIs, browsers, package managers, runtimes, or services.
+6. The agent treats `softExcludeSkills` as advisory boundaries, not hard blocks.
+7. If direct evidence appears, the agent may load an excluded or adjacent skill and should state why.
 
 ## Example Degrees
 
@@ -84,6 +94,7 @@ This first version is deliberately spec-first:
 - No runtime integration.
 - No hidden files.
 - No mutation of installed skills.
+- No automatic installation of MCP servers, CLIs, or services.
 - No hard enforcement of exclusions.
 - No claim that one degree must cover every task.
 
