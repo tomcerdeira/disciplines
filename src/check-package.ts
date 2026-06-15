@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdtemp } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -44,6 +44,13 @@ async function main() {
     env: { ...process.env, HOME: path.join(tmp, "home-version") },
   });
   assert(version.stdout.trim() === pack.version, "packaged CLI --version did not print package version");
+
+  const consumer = path.join(tmp, "consumer");
+  await mkdir(consumer);
+  await writeFile(path.join(consumer, "package.json"), JSON.stringify({ type: "module", dependencies: { disciplines: tarball } }, null, 2));
+  await execFileAsync("npm", ["install", "--silent"], { cwd: consumer });
+  const imported = await execFileAsync("node", ["--input-type=module", "-e", "import { formatPromptBundle } from 'disciplines/resolver'; console.log(typeof formatPromptBundle);"], { cwd: consumer });
+  assert(imported.stdout.trim() === "function", "packaged resolver export was not importable");
 
   console.log(`Package smoke check passed (${pack.name}@${pack.version}).`);
 }

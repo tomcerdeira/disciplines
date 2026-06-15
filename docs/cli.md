@@ -92,6 +92,12 @@ disciplines use installed \
 
 The output is a task-local bundle with selected disciplines, score evidence, included skill ids, recommended tools, soft exclusions, and focus prompts. Use `--format json` when an adapter or script needs structured output.
 
+Adapters can also import the resolver directly:
+
+```ts
+import { createResolverBundle, loadDisciplines } from "disciplines/resolver";
+```
+
 ## List and Find
 
 ```sh

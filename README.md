@@ -122,6 +122,23 @@ npx disciplines add ./local-disciplines
 
 Full CLI reference: [docs/cli.md](docs/cli.md)
 
+## Programmatic API
+
+Adapters and local tooling can import the resolver without shelling out:
+
+```ts
+import { createResolverBundle, formatPromptBundle, loadDisciplines } from "disciplines/resolver";
+
+const disciplines = await loadDisciplines(process.cwd());
+const bundle = createResolverBundle({
+  task: "Fix keyboard navigation in SearchResults.tsx",
+  repoSignals: { files: ["src/components/SearchResults.tsx"] },
+  commands: ["npm run typecheck"],
+}, disciplines);
+
+console.log(formatPromptBundle(bundle));
+```
+
 ## Installed Stores
 
 Project installs live in:

@@ -22,6 +22,17 @@
   "bin": {
     "disciplines": "dist/disciplines.js"
   },
+  "types": "dist/lib/discipline-resolver.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/discipline-resolver.d.ts",
+      "import": "./dist/lib/discipline-resolver.js"
+    },
+    "./resolver": {
+      "types": "./dist/lib/discipline-resolver.d.ts",
+      "import": "./dist/lib/discipline-resolver.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "prepack": "npm run build",
