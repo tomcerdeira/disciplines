@@ -37,6 +37,9 @@ async function main() {
   assert(projectUse.stdout.includes("Selected disciplines:"), "use installed did not print resolver bundle");
   assert(projectUse.stdout.includes("frontend-engineer"), "use installed did not select frontend-engineer");
 
+  const projectDoctor = await run(["doctor", "--project"], { cwd: projectDir });
+  assert(projectDoctor.stdout.includes("OK\tdoctor"), "project doctor did not pass");
+
   await run(["remove", "frontend-engineer", "--project", "--yes"], { cwd: projectDir });
   const projectListAfterRemove = await run(["list", "--project"], { cwd: projectDir });
   assert(!projectListAfterRemove.stdout.includes("frontend-engineer"), "remove did not delete frontend-engineer");
@@ -49,6 +52,8 @@ async function main() {
   assert(globalList.stdout.includes("global\tbackend-engineer"), "global list did not include backend-engineer");
   const globalUpdate = await run(["update", "backend-engineer", "--global"], { env: { HOME: globalHome } });
   assert(globalUpdate.stdout.includes("update global\tbackend-engineer"), "global update did not update backend-engineer");
+  const globalDoctor = await run(["doctor", "--global"], { env: { HOME: globalHome } });
+  assert(globalDoctor.stdout.includes("OK\tdoctor"), "global doctor did not pass");
 
   const initDir = await mkdtemp(path.join(os.tmpdir(), "disciplines-init-"));
   await run(["init", "software-engineer"], { cwd: initDir });

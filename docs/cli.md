@@ -12,6 +12,7 @@ disciplines find [query] [--global|--project]
 disciplines remove|rm [ids...] [--discipline <ids...>] [--all] [--global|--project] [--yes]
 disciplines update [ids...] [--discipline <ids...>] [--global|--project] [--yes]
 disciplines init [name]
+disciplines doctor [--global|--project]
 ```
 
 ## Source Formats
@@ -116,3 +117,13 @@ disciplines init software-engineer
 ```
 
 This creates `software-engineer/DISCIPLINE.md` from the template.
+
+## Doctor
+
+```sh
+disciplines doctor
+disciplines doctor --project
+disciplines doctor --global
+```
+
+`doctor` checks project and global discipline stores, manifests, symlinks, resolver health, installed agent glue, and old `agent-degrees` files that may need cleanup. Missing installs are warnings. Broken installed packages are failures.

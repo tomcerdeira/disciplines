@@ -32,6 +32,7 @@ function usage() {
   disciplines remove|rm [ids...] [--discipline <ids...>] [--all] [--global|--project] [--yes]
   disciplines update [ids...] [--discipline <ids...>] [--global|--project] [--yes]
   disciplines init [name]
+  disciplines doctor [--global|--project]
 
 Sources:
   tomcerdeira/agent-disciplines
@@ -50,6 +51,7 @@ Examples:
   disciplines remove frontend-engineer --project
   disciplines update --all
   disciplines init software-engineer
+  disciplines doctor
 `);
 }
 
@@ -709,6 +711,136 @@ async function commandInit(name) {
   console.log(`write ${filePath}`);
 }
 
+function doctorLine(status, label, detail = "") {
+  console.log(`${status}\t${label}${detail ? `\t${detail}` : ""}`);
+}
+
+async function pathStatus(filePath) {
+  try {
+    const stat = await lstat(filePath);
+    if (stat.isSymbolicLink()) {
+      const target = await readlink(filePath);
+      const absoluteTarget = path.resolve(path.dirname(filePath), target);
+      return { exists: true, kind: existsSync(absoluteTarget) ? "symlink" : "broken-symlink", target };
+    }
+    if (stat.isDirectory()) return { exists: true, kind: "directory" };
+    if (stat.isFile()) return { exists: true, kind: "file" };
+    return { exists: true, kind: "other" };
+  } catch {
+    return { exists: false, kind: "missing" };
+  }
+}
+
+async function checkStore(scope) {
+  let failures = 0;
+  let installedCount = 0;
+  const storeRoot = storeRootForScope(scope);
+  const root = disciplineDir(storeRoot);
+  const manifest = await readManifest(storeRoot);
+
+  if (!existsSync(root)) {
+    doctorLine("WARN", `${scope} store`, `${root} not found`);
+    return { failures, installedCount };
+  }
+
+  doctorLine("OK", `${scope} store`, root);
+
+  let disciplines = [];
+  try {
+    disciplines = await loadDisciplines(storeRoot);
+    installedCount = disciplines.length;
+    doctorLine("OK", `${scope} disciplines`, `${installedCount} installed`);
+  } catch (error) {
+    failures += 1;
+    doctorLine("FAIL", `${scope} disciplines`, error.message);
+    return { failures, installedCount };
+  }
+
+  for (const discipline of disciplines) {
+    const entry = manifest.disciplines[discipline.id];
+    const target = path.join(root, discipline.id);
+    const status = await pathStatus(target);
+    if (!entry) {
+      doctorLine("WARN", `${scope}:${discipline.id}`, "missing manifest entry");
+    } else if (status.kind === "broken-symlink") {
+      failures += 1;
+      doctorLine("FAIL", `${scope}:${discipline.id}`, `broken symlink -> ${status.target}`);
+    } else {
+      doctorLine("OK", `${scope}:${discipline.id}`, `${entry.mode ?? status.kind}`);
+    }
+  }
+
+  try {
+    const bundle = createResolverBundle({
+      task: "Check installed discipline resolver health.",
+      repoSignals: { files: [] },
+      commands: [],
+    }, disciplines);
+    doctorLine("OK", `${scope} resolver`, bundle.decision);
+  } catch (error) {
+    failures += 1;
+    doctorLine("FAIL", `${scope} resolver`, error.message);
+  }
+
+  return { failures, installedCount };
+}
+
+async function checkFile(label, filePath, { warnIfMissing = true } = {}) {
+  const status = await pathStatus(filePath);
+  if (status.exists) {
+    doctorLine("OK", label, filePath);
+    return 0;
+  }
+  if (warnIfMissing) doctorLine("WARN", label, `${filePath} not found`);
+  return 0;
+}
+
+async function checkOldInstall(label, filePath) {
+  const status = await pathStatus(filePath);
+  if (status.exists) doctorLine("WARN", label, `old agent-degrees file found at ${filePath}`);
+}
+
+async function commandDoctor(options) {
+  let failures = 0;
+  let installedCount = 0;
+  const scopes = options.global || options.project
+    ? selectedScopes(options, { defaultScope: "project" })
+    : ["project", "global"];
+
+  for (const scope of scopes) {
+    const result = await checkStore(scope);
+    failures += result.failures;
+    installedCount += result.installedCount;
+  }
+
+  await checkFile("project AGENTS.md", path.join(projectRoot(), "AGENTS.md"), { warnIfMissing: false });
+  await checkFile("project CLAUDE.md", path.join(projectRoot(), "CLAUDE.md"), { warnIfMissing: false });
+  await checkFile("project /discipline", path.join(projectRoot(), ".claude", "commands", "discipline.md"), { warnIfMissing: false });
+  await checkFile("project Cursor rule", path.join(projectRoot(), ".cursor", "rules", "agent-disciplines.mdc"), { warnIfMissing: false });
+  await checkFile("global Claude skill", path.join(os.homedir(), ".claude", "skills", "agent-disciplines", "SKILL.md"), { warnIfMissing: false });
+  await checkFile("global /discipline", path.join(os.homedir(), ".claude", "commands", "discipline.md"), { warnIfMissing: false });
+  await checkFile("global Codex skill", path.join(os.homedir(), ".codex", "skills", "agent-disciplines", "SKILL.md"), { warnIfMissing: false });
+  await checkFile("global Cursor rule", path.join(os.homedir(), ".cursor", "rules", "agent-disciplines.mdc"), { warnIfMissing: false });
+
+  await checkOldInstall("old Claude /degree", path.join(os.homedir(), ".claude", "commands", "degree.md"));
+  await checkOldInstall("old Claude skill", path.join(os.homedir(), ".claude", "skills", "agent-degrees", "SKILL.md"));
+  await checkOldInstall("old Codex skill", path.join(os.homedir(), ".codex", "skills", "agent-degrees", "SKILL.md"));
+  await checkOldInstall("old agents skill", path.join(os.homedir(), ".agents", "skills", "agent-degrees", "SKILL.md"));
+  await checkOldInstall("old project /degree", path.join(projectRoot(), ".claude", "commands", "degree.md"));
+  await checkOldInstall("old project Cursor rule", path.join(projectRoot(), ".cursor", "rules", "agent-degrees.mdc"));
+
+  if (installedCount === 0) {
+    doctorLine("WARN", "installed disciplines", "none found; run `npx disciplines add tomcerdeira/agent-disciplines --all`");
+  }
+
+  if (failures > 0) {
+    doctorLine("FAIL", "doctor", `${failures} failure(s)`);
+    process.exit(1);
+  }
+
+  doctorLine("OK", "doctor", "no blocking issues found");
+}
+
 async function main() {
   const [rawCommand, ...rest] = process.argv.slice(2);
   const command = rawCommand === "ls" ? "list" : rawCommand === "rm" ? "remove" : rawCommand;
@@ -755,6 +887,11 @@ async function main() {
 
   if (command === "init") {
     await commandInit(options._[0]);
+    return;
+  }
+
+  if (command === "doctor") {
+    await commandDoctor(options);
     return;
   }
 
