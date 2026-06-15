@@ -33,6 +33,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "commander": "^14.0.3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

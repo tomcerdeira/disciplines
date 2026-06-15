@@ -9,6 +9,7 @@ import readline from "node:readline/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { Command } from "commander";
 import {
   createResolverBundle,
   formatPromptBundle,
@@ -23,137 +24,6 @@ const SOURCE_STORE_DIR = path.join(os.homedir(), ".agent-disciplines", "sources"
 const GLOBAL_STORE_ROOT = path.join(os.homedir(), ".agent-disciplines");
 const PROJECT_STORE_ROOT = path.join(process.cwd(), ".agents");
 const MANIFEST_FILE = ".disciplines-manifest.json";
-
-function usage() {
-  console.log(`Usage:
-  disciplines add <source> [--discipline <ids...>|--all] [--agent <agents...>] [--global|--project] [--copy] [--yes] [--list]
-  disciplines use <source[@discipline]|installed> [--discipline <ids...>] [--task "..."] [--file path] [--command cmd] [--format prompt|json]
-  disciplines list|ls [source] [--global|--project]
-  disciplines find [query] [--global|--project]
-  disciplines check [ids...] [--discipline <ids...>] [--global|--project]
-  disciplines remove|rm [ids...] [--discipline <ids...>] [--all] [--global|--project] [--yes]
-  disciplines update [ids...] [--discipline <ids...>] [--global|--project] [--yes]
-  disciplines init [name]
-  disciplines doctor [--global|--project]
-  disciplines cleanup [--global|--project] [--disciplines] [--all] [--yes]
-
-Sources:
-  tomcerdeira/disciplines
-  https://github.com/tomcerdeira/disciplines
-  https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
-  https://gitlab.com/org/repo
-  https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
-  git@github.com:tomcerdeira/disciplines.git
-  ./local-disciplines
-
-Examples:
-  disciplines add tomcerdeira/disciplines --discipline frontend-engineer
-  disciplines add tomcerdeira/disciplines --all --agent '*' --global --yes
-  disciplines use tomcerdeira/disciplines@frontend-engineer
-  disciplines use installed --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
-  disciplines list
-  disciplines find frontend
-  disciplines check
-  disciplines remove frontend-engineer --project
-  disciplines update --all
-  disciplines init software-engineer
-  disciplines doctor
-  disciplines cleanup --yes
-`);
-}
-
-function takeValues(argv, index, optionName) {
-  const values = [];
-  let cursor = index + 1;
-  while (cursor < argv.length && !argv[cursor].startsWith("--")) {
-    values.push(argv[cursor]);
-    cursor += 1;
-  }
-  if (values.length === 0) throw new Error(`${optionName} requires a value`);
-  return { values, nextIndex: cursor - 1 };
-}
-
-function parseArgs(argv) {
-  const result: any = { _: [], files: [], commands: [], agents: [], disciplines: [], format: "prompt" };
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    const next = argv[index + 1];
-
-    if (arg === "--help" || arg === "-h") {
-      result.help = true;
-      continue;
-    }
-    if (arg === "--task") {
-      if (!next || next.startsWith("--")) throw new Error("--task requires a value");
-      result.task = next;
-      index += 1;
-      continue;
-    }
-    if (arg === "--file") {
-      if (!next || next.startsWith("--")) throw new Error("--file requires a value");
-      result.files.push(next);
-      index += 1;
-      continue;
-    }
-    if (arg === "--command") {
-      if (!next || next.startsWith("--")) throw new Error("--command requires a value");
-      result.commands.push(next);
-      index += 1;
-      continue;
-    }
-    if (arg === "--agent" || arg === "-a") {
-      const parsed = takeValues(argv, index, "--agent");
-      result.agents.push(...parsed.values);
-      index = parsed.nextIndex;
-      continue;
-    }
-    if (arg === "--discipline" || arg === "-d") {
-      const parsed = takeValues(argv, index, "--discipline");
-      result.disciplines.push(...parsed.values);
-      index = parsed.nextIndex;
-      continue;
-    }
-    if (arg === "--format") {
-      if (!next || next.startsWith("--")) throw new Error("--format requires a value");
-      result.format = next;
-      index += 1;
-      continue;
-    }
-    if (arg === "--global" || arg === "-g") {
-      result.global = true;
-      continue;
-    }
-    if (arg === "--project" || arg === "-p") {
-      result.project = true;
-      continue;
-    }
-    if (arg === "--copy") {
-      result.copy = true;
-      continue;
-    }
-    if (arg === "--yes" || arg === "-y") {
-      result.yes = true;
-      continue;
-    }
-    if (arg === "--list" || arg === "-l") {
-      result.list = true;
-      continue;
-    }
-    if (arg === "--all") {
-      result.all = true;
-      continue;
-    }
-    if (arg === "--disciplines") {
-      result.cleanDisciplines = true;
-      continue;
-    }
-    if (arg.startsWith("--")) throw new Error(`Unknown option: ${arg}`);
-    result._.push(arg);
-  }
-
-  return result;
-}
 
 function sourceSlug(source) {
   return source
@@ -1070,80 +940,131 @@ async function packageVersion() {
   return packageJson.version;
 }
 
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value.flat() : [value];
+}
+
+function normalizedOptions(raw, positional = []) {
+  const options = typeof raw?.opts === "function" ? raw.opts() : raw;
+  return {
+    _: positional,
+    files: asArray(options.file),
+    commands: asArray(options.command),
+    agents: asArray(options.agent),
+    disciplines: asArray(options.discipline),
+    format: options.format ?? "prompt",
+    task: options.task,
+    global: Boolean(options.global),
+    project: Boolean(options.project),
+    copy: Boolean(options.copy),
+    yes: Boolean(options.yes),
+    list: Boolean(options.list),
+    all: Boolean(options.all),
+    cleanDisciplines: Boolean(options.disciplines),
+  };
+}
+
+function addScopeOptions(command) {
+  return command
+    .option("-g, --global", "Use the global discipline store")
+    .option("-p, --project", "Use the current project discipline store");
+}
+
+function addSelectionOptions(command) {
+  return command
+    .option("-d, --discipline <ids...>", "Select discipline ids; use '*' for all")
+    .option("--all", "Select every discipline");
+}
+
 async function main() {
-  const [rawCommand, ...rest] = process.argv.slice(2);
-  if (!rawCommand || rawCommand === "--help" || rawCommand === "-h") {
-    usage();
-    return;
-  }
-  if (rawCommand === "--version" || rawCommand === "-v" || rawCommand === "version") {
-    console.log(await packageVersion());
-    return;
-  }
+  const program = new Command();
 
-  const command = rawCommand === "ls" ? "list" : rawCommand === "rm" ? "remove" : rawCommand;
-  const options = parseArgs(rest);
+  program
+    .name("disciplines")
+    .description("Install, resolve, and manage portable agent discipline packages.")
+    .version(await packageVersion(), "-v, --version")
+    .showHelpAfterError()
+    .addHelpText("after", `
+Sources:
+  tomcerdeira/disciplines
+  https://github.com/tomcerdeira/disciplines
+  https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
+  https://gitlab.com/org/repo
+  https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
+  git@github.com:tomcerdeira/disciplines.git
+  ./local-disciplines
 
-  if (options.help) {
-    usage();
-    return;
-  }
+Examples:
+  disciplines add tomcerdeira/disciplines --discipline frontend-engineer
+  disciplines add tomcerdeira/disciplines --all --agent '*' --global --yes
+  disciplines use tomcerdeira/disciplines@frontend-engineer
+  disciplines use installed --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
+  disciplines check
+  disciplines doctor
+`);
 
-  if (command === "list") {
-    await commandList(options._[0], options);
-    return;
-  }
+  addScopeOptions(addSelectionOptions(program.command("add <source>")
+    .description("Install disciplines from a source")
+    .option("-a, --agent <agents...>", "Install agent glue for agents; use '*' for all")
+    .option("--copy", "Copy packages instead of symlinking")
+    .option("-y, --yes", "Skip confirmation prompts")
+    .option("-l, --list", "List available disciplines without installing")))
+    .action((source, raw) => commandAdd(source, normalizedOptions(raw)));
 
-  if (command === "find") {
-    await commandFind(options._[0], options);
-    return;
-  }
+  addSelectionOptions(program.command("use <source>")
+    .description("Resolve a task with a source or installed disciplines")
+    .option("--task <text>", "Task text to resolve")
+    .option("--file <paths...>", "Relevant file paths")
+    .option("--command <commands...>", "Relevant verification or workflow commands")
+    .option("--format <format>", "Output format: prompt or json", "prompt"))
+    .action((source, raw) => commandUse(source, normalizedOptions(raw)));
 
-  if (command === "use") {
-    const source = options._[0];
-    if (!source) throw new Error("use requires a source");
-    await commandUse(source, options);
-    return;
-  }
+  addScopeOptions(program.command("list [source]")
+    .alias("ls")
+    .description("List installed disciplines or inspect a source"))
+    .option("-d, --discipline <ids...>", "Filter source disciplines by id")
+    .action((source, raw) => commandList(source, normalizedOptions(raw)));
 
-  if (command === "add") {
-    const source = options._[0];
-    if (!source) throw new Error("add requires a source");
-    await commandAdd(source, options);
-    return;
-  }
+  addScopeOptions(program.command("find [query]")
+    .description("Search installed disciplines"))
+    .action((query, raw) => commandFind(query, normalizedOptions(raw)));
 
-  if (command === "remove") {
-    await commandRemove(options._, options);
-    return;
-  }
+  addScopeOptions(addSelectionOptions(program.command("check [ids...]")
+    .description("Check installed disciplines for source updates")))
+    .action((ids, raw) => commandCheck(ids, normalizedOptions(raw, ids)));
 
-  if (command === "check") {
-    await commandCheck(options._, options);
-    return;
-  }
+  addScopeOptions(addSelectionOptions(program.command("remove [ids...]")
+    .alias("rm")
+    .description("Remove installed disciplines")
+    .option("-y, --yes", "Skip confirmation prompts")))
+    .action((ids, raw) => commandRemove(ids, normalizedOptions(raw, ids)));
 
-  if (command === "update") {
-    await commandUpdate(options._, options);
-    return;
-  }
+  addScopeOptions(addSelectionOptions(program.command("update [ids...]")
+    .description("Update installed disciplines from their sources")
+    .option("-y, --yes", "Skip confirmation prompts")))
+    .action((ids, raw) => commandUpdate(ids, normalizedOptions(raw, ids)));
 
-  if (command === "init") {
-    await commandInit(options._[0]);
-    return;
-  }
+  program.command("init [name]")
+    .description("Create a new DISCIPLINE.md template")
+    .action((name) => commandInit(name));
 
-  if (command === "doctor") {
-    await commandDoctor(options);
-    return;
-  }
+  addScopeOptions(program.command("doctor")
+    .description("Inspect installed stores, resolver health, and agent glue"))
+    .action((raw) => commandDoctor(normalizedOptions(raw)));
 
-  if (command === "cleanup") {
-    await commandCleanup(options);
-    return;
-  }
+  addScopeOptions(program.command("cleanup")
+    .description("Remove old agent-degrees files or current discipline installs")
+    .option("--disciplines", "Also remove current discipline stores and agent glue")
+    .option("--all", "Alias for --disciplines")
+    .option("-y, --yes", "Skip confirmation prompts"))
+    .action((raw) => commandCleanup(normalizedOptions(raw)));
 
-  throw new Error(`Unknown command: ${command}`);
+  program.command("version")
+    .description("Print the package version")
+    .action(async () => console.log(await packageVersion()));
+
+  await program.parseAsync(process.argv);
 }
 
 main().catch((error) => {
