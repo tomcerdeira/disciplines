@@ -33,6 +33,18 @@ async function main() {
     env: { ...process.env, HOME: path.join(tmp, "home") },
   });
 
+  const help = await execFileAsync("npm", ["exec", "--yes", "--package", tarball, "--", "disciplines", "--help"], {
+    cwd: tmp,
+    env: { ...process.env, HOME: path.join(tmp, "home-help") },
+  });
+  assert(help.stdout.includes("Usage:"), "packaged CLI --help did not print usage");
+
+  const version = await execFileAsync("npm", ["exec", "--yes", "--package", tarball, "--", "disciplines", "--version"], {
+    cwd: tmp,
+    env: { ...process.env, HOME: path.join(tmp, "home-version") },
+  });
+  assert(version.stdout.trim() === pack.version, "packaged CLI --version did not print package version");
+
   console.log(`Package smoke check passed (${pack.name}@${pack.version}).`);
 }
 

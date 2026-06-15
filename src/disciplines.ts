@@ -1043,12 +1043,26 @@ async function commandCleanup(options) {
   console.log(`cleanup\tremoved ${removed} item(s)`);
 }
 
+async function packageVersion() {
+  const packageJson = JSON.parse(await readFile(path.join(CLI_ROOT, "package.json"), "utf8"));
+  return packageJson.version;
+}
+
 async function main() {
   const [rawCommand, ...rest] = process.argv.slice(2);
+  if (!rawCommand || rawCommand === "--help" || rawCommand === "-h") {
+    usage();
+    return;
+  }
+  if (rawCommand === "--version" || rawCommand === "-v" || rawCommand === "version") {
+    console.log(await packageVersion());
+    return;
+  }
+
   const command = rawCommand === "ls" ? "list" : rawCommand === "rm" ? "remove" : rawCommand;
   const options = parseArgs(rest);
 
-  if (!command || options.help) {
+  if (options.help) {
     usage();
     return;
   }
