@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-disciplines.dev/schemas/disciplines.lock.schema.json",
+  "title": "Disciplines Lockfile",
+  "description": "Lockfile written by `disciplines install` for repeatable project restores.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "disciplines"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Lockfile format version. Current version is 1."
+    },
+    "disciplines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/lockEntry"
+      }
+    }
+  },
+  "$defs": {
+    "lockEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "sourcePath"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Installed discipline id."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Original source reference from disciplines.json."
+        },
+        "sourcePath": {
+          "type": "string",
+          "description": "Path to the discipline package inside the resolved source root."
+        },
+        "sourceRev": {
+          "type": ["string", "null"],
+          "description": "Resolved git revision, or null for local/non-git sources."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["copy", "symlink"],
+          "description": "Install mode used for this package."
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Optional agent glue targets associated with this locked package."
+        }
+      }
+    }
+  }
+}

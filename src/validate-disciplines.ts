@@ -280,6 +280,8 @@ function validatePromptSignals(promptSignals, filePath) {
 async function main() {
   let schema;
 
+  await validateSchemaFiles();
+
   try {
     schema = JSON.parse(await readFile(schemaPath, "utf8"));
   } catch (error) {
@@ -333,6 +335,19 @@ async function main() {
   await validateResolverCases(seenIds);
 
   finish(disciplinePackages.length);
+}
+
+async function validateSchemaFiles() {
+  const entries = await readdir(path.join(root, "schema"), { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    const filePath = path.join("schema", entry.name);
+    try {
+      JSON.parse(await readFile(path.join(root, filePath), "utf8"));
+    } catch (error) {
+      fail(`${filePath}: invalid JSON: ${error.message}`);
+    }
+  }
 }
 
 async function validateResolverCases(disciplineIds) {

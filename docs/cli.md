@@ -86,6 +86,8 @@ Each entry supports `source`, `discipline` or `disciplines`, `all`, `agents`, an
 
 By default `install` reads and writes `disciplines-lock.json` beside the config. The lockfile records installed ids, source paths, install modes, and git revisions. Commit it with `disciplines.json` for repeatable setup, or pass `--no-lock` for one-off local restores.
 
+Schemas are available in [../schema/disciplines.config.schema.json](../schema/disciplines.config.schema.json) and [../schema/disciplines.lock.schema.json](../schema/disciplines.lock.schema.json).
+
 Scopes:
 
 - `--project`: installs under `.agents/disciplines/` in the current project.

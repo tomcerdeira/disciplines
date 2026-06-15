@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-disciplines.dev/schemas/disciplines.config.schema.json",
+  "title": "Disciplines Install Config",
+  "description": "Project-level config consumed by `disciplines install`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "disciplines"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Config format version. Current version is 1."
+    },
+    "disciplines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/configEntry"
+      }
+    }
+  },
+  "$defs": {
+    "configEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "GitHub shorthand, GitHub/GitLab URL, generic git URL, or local path."
+        },
+        "discipline": {
+          "description": "One discipline id or a list of ids to install from this source.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        "disciplines": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "all": {
+          "type": "boolean",
+          "description": "Install every discipline from the source."
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Optional agent glue targets, such as codex, claude-code, cursor, or *."
+        },
+        "copy": {
+          "type": "boolean",
+          "description": "Copy packages instead of symlinking."
+        }
+      }
+    }
+  }
+}

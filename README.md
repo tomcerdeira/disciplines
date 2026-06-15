@@ -64,7 +64,11 @@ Prefer UI, interaction, accessibility, and browser-verification context.
 Treat backend, database, and infrastructure skills as soft exclusions unless concrete evidence requires them.
 ```
 
-Schema: [schema/discipline.schema.json](schema/discipline.schema.json)
+Schemas:
+
+- [DISCIPLINE.md frontmatter](schema/discipline.schema.json)
+- [disciplines.json](schema/disciplines.config.schema.json)
+- [disciplines-lock.json](schema/disciplines.lock.schema.json)
 
 Authoring guide: [docs/authoring-disciplines.md](docs/authoring-disciplines.md)
 
