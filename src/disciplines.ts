@@ -714,9 +714,19 @@ async function commandCheck(args, options) {
   console.log(`check\t${checked} discipline(s) checked${warnings ? `; ${warnings} warning(s)` : "; all up to date"}`);
 }
 
+function disciplineIdFromName(name) {
+  const id = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^[^a-z0-9]+/, "")
+    .replace(/-+$/g, "");
+  return id || "new-discipline";
+}
+
 async function commandInit(name) {
-  const targetDir = name ? path.resolve(process.cwd(), name) : process.cwd();
-  const id = name ? path.basename(targetDir) : path.basename(process.cwd());
+  const id = disciplineIdFromName(name ?? path.basename(process.cwd()));
+  const targetDir = name ? path.resolve(process.cwd(), id) : process.cwd();
   const filePath = path.join(targetDir, "DISCIPLINE.md");
   if (existsSync(filePath)) throw new Error(`${filePath} already exists`);
   const template = await readFile(path.join(CLI_ROOT, "templates", "discipline", "DISCIPLINE.md"), "utf8");

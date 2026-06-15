@@ -84,6 +84,12 @@ async function main() {
   assert(existsSync(initialized), "init did not create DISCIPLINE.md");
   assert((await readFile(initialized, "utf8")).includes("id: software-engineer"), "init did not set id");
 
+  const spacedInitDir = await mkdtemp(path.join(os.tmpdir(), "disciplines-init-spaced-"));
+  await run(["init", "Software Engineer"], { cwd: spacedInitDir });
+  const spacedInitialized = path.join(spacedInitDir, "software-engineer", "DISCIPLINE.md");
+  assert(existsSync(spacedInitialized), "init did not slugify spaced name");
+  assert((await readFile(spacedInitialized, "utf8")).includes("id: software-engineer"), "init did not slugify id");
+
   const explicitUse = await run(["use", `${root}@frontend-engineer`]);
   assert(explicitUse.stdout.includes("Selected explicitly."), "source@discipline did not select explicitly");
 

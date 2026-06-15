@@ -132,6 +132,8 @@ disciplines init software-engineer
 
 This creates `software-engineer/DISCIPLINE.md` from the template.
 
+Names are normalized into schema-valid ids, so `disciplines init "Software Engineer"` also creates `software-engineer/DISCIPLINE.md`.
+
 ## Doctor
 
 ```sh
