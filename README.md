@@ -138,7 +138,7 @@ Projects can commit a small `disciplines.json` for reproducible setup:
 }
 ```
 
-Run `npx disciplines install --project --yes` to restore the configured packages and optional agent glue.
+Run `npx disciplines install --project --yes` to restore the configured packages and optional agent glue. The command writes `disciplines-lock.json` with the resolved source paths and git revisions. Commit both files when you want repeatable project setup; pass `--no-lock` for local throwaway installs.
 
 ## Programmatic API
 

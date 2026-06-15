@@ -6,7 +6,7 @@ The `disciplines` CLI is a small package manager for discipline packages. It int
 
 ```sh
 disciplines add <source> [--discipline <ids...>|--all] [--agent <agents...>] [--global|--project] [--copy] [--yes] [--list]
-disciplines install [--config path] [--agent <agents...>] [--global|--project] [--copy] [--yes]
+disciplines install [--config path] [--lockfile path] [--no-lock] [--agent <agents...>] [--global|--project] [--copy] [--yes]
 disciplines use <source[@discipline]|installed> [--discipline <ids...>] [--task "..."] [--file path] [--command cmd] [--format prompt|json]
 disciplines list|ls [source] [--global|--project]
 disciplines find [query] [--global|--project]
@@ -64,6 +64,7 @@ Restore from a project config:
 ```sh
 disciplines install
 disciplines install --config disciplines.json --project --yes
+disciplines install --no-lock
 ```
 
 `disciplines.json` is intentionally small and portable:
@@ -82,6 +83,8 @@ disciplines install --config disciplines.json --project --yes
 ```
 
 Each entry supports `source`, `discipline` or `disciplines`, `all`, `agents`, and `copy`. Command flags such as `--project`, `--global`, and `--yes` still control the restore scope and overwrite behavior.
+
+By default `install` reads and writes `disciplines-lock.json` beside the config. The lockfile records installed ids, source paths, install modes, and git revisions. Commit it with `disciplines.json` for repeatable setup, or pass `--no-lock` for one-off local restores.
 
 Scopes:
 

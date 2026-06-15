@@ -26,6 +26,7 @@ const GLOBAL_STORE_ROOT = path.join(os.homedir(), ".agent-disciplines");
 const PROJECT_STORE_ROOT = path.join(process.cwd(), ".agents");
 const MANIFEST_FILE = ".disciplines-manifest.json";
 const CONFIG_FILE = "disciplines.json";
+const LOCK_FILE = "disciplines-lock.json";
 
 const manifestEntrySchema = z.object({
   id: z.string().min(1),
@@ -57,6 +58,20 @@ const installConfigEntrySchema = z.object({
 const installConfigSchema = z.object({
   version: z.number().int().positive(),
   disciplines: z.array(installConfigEntrySchema).min(1),
+}).strict();
+
+const lockEntrySchema = z.object({
+  id: z.string().min(1),
+  source: z.string().min(1),
+  sourcePath: z.string(),
+  sourceRev: z.string().nullable().optional(),
+  mode: z.enum(["copy", "symlink"]).optional(),
+  agents: z.array(z.string().min(1)).optional(),
+}).strict();
+
+const lockfileSchema = z.object({
+  version: z.number().int().positive(),
+  disciplines: z.array(lockEntrySchema),
 }).strict();
 
 function sourceSlug(source) {
@@ -132,17 +147,24 @@ function parseRemoteSource(source) {
   return null;
 }
 
-async function ensureGitSource(source) {
+async function ensureGitSource(source, revision = null) {
   const remote = parseRemoteSource(source);
   if (!remote) return null;
 
   const target = path.join(SOURCE_STORE_DIR, remote.slug);
   if (!existsSync(target)) {
     await mkdir(SOURCE_STORE_DIR, { recursive: true });
-    const args = ["clone", "--depth", "1"];
+    const args = ["clone"];
+    if (!revision) args.push("--depth", "1");
     if (remote.branch) args.push("--branch", remote.branch);
     args.push(remote.gitUrl, target);
     await execFileAsync("git", args);
+  } else if (revision) {
+    await fetchGitSource(target);
+  }
+
+  if (revision) {
+    await execFileAsync("git", ["-C", target, "checkout", "--quiet", revision]);
   }
 
   return {
@@ -154,12 +176,12 @@ async function ensureGitSource(source) {
   };
 }
 
-async function resolveSource(source) {
+async function resolveSource(source, revision = null) {
   if (source === "installed") {
     return { root: installedAggregateRoot(), sourceRoot: installedAggregateRoot(), sourceRef: "installed", installed: true };
   }
 
-  const gitSource = await ensureGitSource(source);
+  const gitSource = await ensureGitSource(source, revision);
   if (gitSource) return gitSource;
 
   const localPath = path.resolve(process.cwd(), source);
@@ -546,10 +568,12 @@ async function commandUse(sourceArg, options) {
 
 async function commandAdd(sourceArg, options) {
   const spec = parseSourceSpec(sourceArg);
-  const sourceInfo = await resolveSource(spec.source);
+  const selectedIds = selectedIdsFromOptions(options, spec.discipline);
+  const lockIds = selectedIds === "*" ? [] : selectedIds;
+  const lockedRevision = lockedRevisionFor(options, spec.source, lockIds);
+  const sourceInfo = await resolveSource(spec.source, lockedRevision);
   const disciplines = await loadDisciplinesFromSource(sourceInfo.root);
-  const selection = selectedIdsFromOptions(options, spec.discipline);
-  const selected = filterDisciplines(disciplines, selection, { defaultAll: true });
+  const selected = filterDisciplines(disciplines, selectedIds, { defaultAll: true });
 
   if (options.list) {
     for (const discipline of selected) printDisciplineRow(discipline);
@@ -576,6 +600,68 @@ async function readInstallConfig(configPath) {
   return parsed.data;
 }
 
+async function readLockfile(lockPath) {
+  try {
+    const json = JSON.parse(await readFile(lockPath, "utf8"));
+    const parsed = lockfileSchema.safeParse(json);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const issuePath = issue.path.length > 0 ? issue.path.join(".") : "lockfile";
+      throw new Error(`${lockPath}: invalid lockfile at ${issuePath}: ${issue.message}`);
+    }
+    return parsed.data;
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+function lockKey(source, id) {
+  return `${source}\u0000${id}`;
+}
+
+function lockedRevisionFor(options, source, ids) {
+  if (!options.lockedRevisions) return null;
+  for (const id of ids) {
+    const revision = options.lockedRevisions.get(lockKey(source, id));
+    if (revision) return revision;
+  }
+  if (ids.length === 0) {
+    const prefix = `${source}\u0000`;
+    for (const [key, revision] of options.lockedRevisions.entries()) {
+      if (key.startsWith(prefix) && revision) return revision;
+    }
+  }
+  return null;
+}
+
+async function writeLockfileFromScopes(lockPath, scopes) {
+  const entries = [];
+  const seen = new Set();
+
+  for (const scope of scopes) {
+    const manifest = await readManifest(storeRootForScope(scope));
+    for (const entry of Object.values(manifest.disciplines)) {
+      if (!entry.source || !entry.sourcePath) continue;
+      const key = lockKey(entry.source, entry.id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      entries.push({
+        id: entry.id,
+        source: entry.source,
+        sourcePath: entry.sourcePath,
+        sourceRev: entry.sourceRev ?? null,
+        mode: entry.mode,
+      });
+    }
+  }
+
+  entries.sort((a, b) => a.source.localeCompare(b.source) || a.id.localeCompare(b.id));
+  await mkdir(path.dirname(lockPath), { recursive: true });
+  await writeFile(lockPath, `${JSON.stringify({ version: 1, disciplines: entries }, null, 2)}\n`);
+  console.log(`write ${lockPath}`);
+}
+
 function entryDisciplines(entry) {
   const ids = [
     ...asArray(entry.discipline),
@@ -587,6 +673,13 @@ function entryDisciplines(entry) {
 async function commandInstall(options) {
   const configPath = path.resolve(projectRoot(), options.config ?? CONFIG_FILE);
   const config = await readInstallConfig(configPath);
+  const lockPath = path.resolve(projectRoot(), options.lockfile ?? LOCK_FILE);
+  const lockfile = options.lock === false ? null : await readLockfile(lockPath);
+  const lockedRevisions = new Map();
+
+  for (const entry of lockfile?.disciplines ?? []) {
+    if (entry.sourceRev) lockedRevisions.set(lockKey(entry.source, entry.id), entry.sourceRev);
+  }
 
   for (const entry of config.disciplines) {
     await commandAdd(entry.source, {
@@ -595,8 +688,14 @@ async function commandInstall(options) {
       agents: entry.agents ?? options.agents,
       all: Boolean(entry.all),
       copy: entry.copy ?? options.copy,
+      lockedRevisions,
       list: false,
     });
+  }
+
+  if (options.lock !== false) {
+    const scopes = selectedScopes(options, { defaultScope: "project" });
+    await writeLockfileFromScopes(lockPath, scopes);
   }
 }
 
@@ -1065,6 +1164,8 @@ function normalizedOptions(raw, positional = []) {
     list: Boolean(options.list),
     all: Boolean(options.all),
     config: options.config,
+    lockfile: options.lockfile,
+    lock: options.lock,
     cleanDisciplines: Boolean(options.disciplines),
   };
 }
@@ -1119,6 +1220,8 @@ Examples:
   addScopeOptions(program.command("install")
     .description("Install disciplines from a disciplines.json config")
     .option("-c, --config <path>", "Config file path", CONFIG_FILE)
+    .option("--lockfile <path>", "Lockfile path", LOCK_FILE)
+    .option("--no-lock", "Do not read or write a lockfile")
     .option("-a, --agent <agents...>", "Override agent glue targets; use '*' for all")
     .option("--copy", "Copy packages instead of symlinking")
     .option("-y, --yes", "Skip confirmation prompts"))

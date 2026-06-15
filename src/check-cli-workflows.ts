@@ -109,6 +109,23 @@ async function main() {
   await run(["install", "--project", "--yes"], { cwd: installDir });
   const installedFromConfig = await run(["list", "--project"], { cwd: installDir });
   assert(installedFromConfig.stdout.includes("project\tfrontend-engineer"), "install did not restore discipline from config");
+  const lockfilePath = path.join(installDir, "disciplines-lock.json");
+  assert(existsSync(lockfilePath), "install did not write disciplines-lock.json");
+  const lockfile = JSON.parse(await readFile(lockfilePath, "utf8"));
+  assert(lockfile.disciplines.some((entry) => entry.id === "frontend-engineer" && entry.source === root), "lockfile did not record frontend-engineer");
+
+  const noLockDir = await mkdtemp(path.join(os.tmpdir(), "disciplines-install-no-lock-"));
+  await writeFile(path.join(noLockDir, "disciplines.json"), JSON.stringify({
+    version: 1,
+    disciplines: [
+      {
+        source: root,
+        discipline: "frontend-engineer",
+      },
+    ],
+  }, null, 2));
+  await run(["install", "--project", "--yes", "--no-lock"], { cwd: noLockDir });
+  assert(!existsSync(path.join(noLockDir, "disciplines-lock.json")), "install --no-lock wrote lockfile");
 
   const globalHome = await mkdtemp(path.join(os.tmpdir(), "disciplines-home-"));
   await run(["add", root, "--discipline", "backend-engineer", "--global", "--copy", "--yes"], {
