@@ -23,6 +23,8 @@ disciplines cleanup [--global|--project] [--disciplines] [--all] [--yes]
 disciplines add tomcerdeira/disciplines
 disciplines add https://github.com/tomcerdeira/disciplines
 disciplines add https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
+disciplines add https://gitlab.com/org/repo
+disciplines add https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
 disciplines add git@github.com:tomcerdeira/disciplines.git
 disciplines add ./local-disciplines
 ```

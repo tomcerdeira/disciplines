@@ -40,6 +40,8 @@ Sources:
   tomcerdeira/disciplines
   https://github.com/tomcerdeira/disciplines
   https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
+  https://gitlab.com/org/repo
+  https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
   git@github.com:tomcerdeira/disciplines.git
   ./local-disciplines
 
@@ -196,6 +198,25 @@ function parseRemoteSource(source) {
       gitUrl: `https://github.com/${githubUrl[1]}/${githubUrl[2]}.git`,
       subPath: "",
       slug: `${githubUrl[1]}-${githubUrl[2]}`,
+    };
+  }
+
+  const gitlabTree = source.match(/^https:\/\/gitlab\.com\/(.+?)\/-\/tree\/([^/]+)\/(.+)$/);
+  if (gitlabTree) {
+    return {
+      gitUrl: `https://gitlab.com/${gitlabTree[1]}.git`,
+      branch: gitlabTree[2],
+      subPath: gitlabTree[3],
+      slug: `gitlab-${sourceSlug(gitlabTree[1])}-${gitlabTree[2]}`,
+    };
+  }
+
+  const gitlabUrl = source.match(/^https:\/\/gitlab\.com\/(.+?)(?:\.git)?\/?$/);
+  if (gitlabUrl && !gitlabUrl[1].includes("/-/")) {
+    return {
+      gitUrl: `https://gitlab.com/${gitlabUrl[1]}.git`,
+      subPath: "",
+      slug: `gitlab-${sourceSlug(gitlabUrl[1])}`,
     };
   }
 

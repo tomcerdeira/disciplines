@@ -109,12 +109,14 @@ Create a new discipline:
 npx disciplines init software-engineer
 ```
 
-Supported source formats include GitHub shorthand, full GitHub URLs, GitHub tree URLs, generic git URLs, and local paths:
+Supported source formats include GitHub shorthand, full GitHub URLs, GitHub tree URLs, GitLab URLs, generic git URLs, and local paths:
 
 ```sh
 npx disciplines add tomcerdeira/disciplines
 npx disciplines add https://github.com/tomcerdeira/disciplines
 npx disciplines add https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
+npx disciplines add https://gitlab.com/org/repo
+npx disciplines add https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
 npx disciplines add ./local-disciplines
 ```
 
