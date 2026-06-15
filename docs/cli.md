@@ -8,6 +8,9 @@ The `disciplines` CLI is a small package manager for discipline packages. It int
 disciplines add <source> [--discipline <ids...>|--all] [--agent <agents...>] [--global|--project] [--copy] [--yes] [--list]
 disciplines install [--config path] [--lockfile path] [--no-lock] [--agent <agents...>] [--global|--project] [--copy] [--yes]
 disciplines use <source[@discipline]|installed> [--discipline <ids...>] [--task "..."] [--file path] [--command cmd] [--format prompt|json]
+disciplines prepare <source[@discipline]|installed> [--discipline <ids...>] [--task "..."] [--file path] [--command cmd] [--agent-name codex|claude-code|cursor|*] [--format prompt|json]
+disciplines catalog|browse [query] [--verbose] [--catalog path]
+disciplines search [query] [--verbose] [--catalog path]
 disciplines list|ls [source] [--global|--project]
 disciplines find [query] [--global|--project]
 disciplines check [ids...] [--discipline <ids...>] [--global|--project]
@@ -16,24 +19,25 @@ disciplines update [ids...] [--discipline <ids...>] [--global|--project] [--yes]
 disciplines init [name]
 disciplines doctor [--global|--project]
 disciplines cleanup [--global|--project] [--disciplines] [--all] [--yes]
+disciplines smoke [--source source] [--keep]
 ```
 
 ## Source Formats
 
 ```sh
-disciplines add tomcerdeira/disciplines
-disciplines add https://github.com/tomcerdeira/disciplines
-disciplines add https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
+disciplines add owner/disciplines
+disciplines add https://github.com/org/disciplines
+disciplines add https://github.com/org/disciplines/tree/main/disciplines/software-engineer
 disciplines add https://gitlab.com/org/repo
-disciplines add https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
-disciplines add git@github.com:tomcerdeira/disciplines.git
+disciplines add https://gitlab.com/org/repo/-/tree/main/disciplines/software-engineer
+disciplines add git@github.com:org/disciplines.git
 disciplines add ./local-disciplines
 ```
 
 Use `@id` when selecting one discipline from a source:
 
 ```sh
-disciplines use tomcerdeira/disciplines@frontend-engineer
+disciplines use owner/disciplines@software-engineer
 ```
 
 ## Install
@@ -41,13 +45,13 @@ disciplines use tomcerdeira/disciplines@frontend-engineer
 Install one discipline:
 
 ```sh
-disciplines add tomcerdeira/disciplines --discipline frontend-engineer
+disciplines add owner/disciplines --discipline software-engineer
 ```
 
 Install every discipline and every supported adapter globally:
 
 ```sh
-disciplines add tomcerdeira/disciplines --all --agent '*' --global --yes
+disciplines add owner/disciplines --all --agent '*' --global --yes
 ```
 
 Supported agents:
@@ -75,7 +79,7 @@ disciplines install --no-lock
   "disciplines": [
     {
       "source": "tomcerdeira/disciplines",
-      "discipline": "frontend-engineer",
+      "discipline": "software-engineer",
       "agents": ["codex"]
     }
   ]
@@ -110,7 +114,7 @@ Overwrite behavior:
 Use without installing:
 
 ```sh
-disciplines use tomcerdeira/disciplines@frontend-engineer
+disciplines use owner/disciplines@software-engineer
 ```
 
 Resolve a task against installed disciplines:
@@ -130,12 +134,62 @@ Adapters can also import the resolver directly:
 import { createResolverBundle, loadDisciplines } from "disciplines/resolver";
 ```
 
+## Prepare
+
+```sh
+disciplines prepare installed \
+  --task "Fix keyboard navigation in the candidates desktop view" \
+  --file src/modules/candidates/ui/candidates-page.tsx \
+  --agent-name codex
+
+disciplines prepare owner/disciplines@software-engineer --agent-name claude-code
+disciplines prepare installed --task "Analyze a CSV export" --format json
+```
+
+`prepare` resolves the same discipline bundle as `use`, then checks whether the selected discipline's `includeSkills` and `recommendedTools` appear available in the current runtime.
+
+Current detection is intentionally conservative:
+
+- Codex skills: `~/.codex/skills/<id>/SKILL.md` and `~/.agents/skills/<id>/SKILL.md`
+- Claude Code skills: `~/.claude/skills/<id>/SKILL.md`
+- CLI/runtime tools: executable on `PATH`
+- package managers: lockfile-aware `bun`, `pnpm`, `yarn`, then `npm`
+- MCPs and services: reported as `UNKNOWN` unless a runtime adapter can prove availability
+
+The command does not install missing capabilities. Its prompt output tells the agent to ask the user whether to install/configure missing or unknown skills, MCPs, CLIs, plugins, or services, skip them for now, or continue with available capabilities.
+
+When a discipline declares `skillInstallHints`, `prepare` includes Vercel Skills CLI commands for missing skills. For example:
+
+```text
+install after approval: npx skills add vercel-labs/agent-skills --skill vercel-react-best-practices
+```
+
+Agents should treat those commands as proposed actions, not automatic actions. Ask the user first, then run the approved `npx skills add ... --skill ...` command.
+
+## Catalog, Browse, and Search
+
+```sh
+disciplines catalog
+disciplines browse frontend --verbose
+disciplines search react
+```
+
+`catalog`, `browse`, and `search` inspect the package-shipped catalog at [../catalog/disciplines.json](../catalog/disciplines.json). They do not require installed disciplines and they do not call a hosted registry.
+
+Use `--verbose` to print descriptions, tags, recommended tool hints, and a copyable install command:
+
+```sh
+disciplines add owner/disciplines --discipline software-engineer
+```
+
+Use `--catalog path/to/catalog.json` to test a local catalog file with the same schema.
+
 ## List and Find
 
 ```sh
 disciplines list
 disciplines ls --global
-disciplines list tomcerdeira/disciplines --discipline frontend-engineer
+disciplines list owner/disciplines --discipline software-engineer
 disciplines find react
 ```
 
@@ -145,11 +199,11 @@ disciplines find react
 
 ```sh
 disciplines check
-disciplines check frontend-engineer --global
-disciplines remove frontend-engineer
+disciplines check software-engineer --global
+disciplines remove software-engineer
 disciplines rm --all --global --yes
 disciplines update
-disciplines update frontend-engineer --project
+disciplines update software-engineer --project
 ```
 
 `check` fetches git metadata for installed sources and compares each manifest-recorded revision with the latest known source revision. It reports `UPDATE` rows when newer source revisions are available, but it does not relink, recopy, or otherwise mutate installed packages.
@@ -190,3 +244,14 @@ disciplines cleanup --global --disciplines --yes
 ```
 
 `cleanup` removes stale `agent-degrees` artifacts from older installs, such as `/degree`, `agent-degrees` skills, and old Cursor rules. By default it does not remove current `agent-disciplines` installs. Add `--disciplines` or `--all` when you also want to remove current discipline stores, manifests, source cache entries, and installed agent glue.
+
+## Smoke
+
+```sh
+disciplines smoke --source owner/disciplines
+disciplines smoke --source . --keep
+```
+
+`smoke` creates a temporary project, installs a discipline with project Codex glue, runs `list`, resolves a realistic task with `use installed`, and runs `doctor --project`.
+
+Use `--source` to test a GitHub repo, GitLab repo, git URL, or local path that contains at least one discipline package. Use `--keep` when you want to inspect the temporary project after the run.

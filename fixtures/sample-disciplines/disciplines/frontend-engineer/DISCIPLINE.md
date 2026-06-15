@@ -11,6 +11,16 @@ includeSkills:
   - ui-ux-pro-max
   - control-ui
   - e2e-testing
+skillInstallHints:
+  - id: react-best-practices
+    source: vercel-labs/agent-skills
+    packageManager: skills
+  - id: vercel-react-best-practices
+    source: vercel-labs/agent-skills
+    packageManager: skills
+  - id: e2e-testing
+    source: vercel-labs/agent-skills
+    packageManager: skills
 softExcludeSkills:
   - backend-patterns
   - database-migrations

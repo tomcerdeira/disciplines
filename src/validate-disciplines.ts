@@ -8,6 +8,7 @@ import YAML from "yaml";
 const root = process.cwd();
 const schemaPath = path.join(root, "schema", "discipline.schema.json");
 const disciplinesDir = path.join(root, "disciplines");
+const sampleDisciplinesDir = path.join(root, "fixtures", "sample-disciplines", "disciplines");
 const resolverCasesPath = path.join(root, "fixtures", "resolver-cases.jsonc");
 
 const errors = [];
@@ -111,6 +112,7 @@ function validateDiscipline(data, filePath, schema, seenIds) {
 
   if ("aliases" in data) expectStringArray(data, "aliases", filePath, { allowEmpty: true });
   if ("notes" in data) expectString(data, "notes", filePath);
+  validateSkillInstallHints(data, filePath, schema);
 
   if ("confidenceThreshold" in data) {
     const threshold = data.confidenceThreshold;
@@ -145,6 +147,56 @@ function validateDiscipline(data, filePath, schema, seenIds) {
 
   validateRecommendedTools(data.recommendedTools, filePath, schema);
   validateActivation(data.activation, filePath);
+}
+
+function validateSkillInstallHints(data, filePath, schema) {
+  if (!("skillInstallHints" in data)) return;
+  if (!Array.isArray(data.skillInstallHints)) {
+    fail(`${filePath}: skillInstallHints must be an array`);
+    return;
+  }
+
+  const skillPattern = new RegExp(schema.$defs.skillId.pattern);
+  const includeSkills = new Set(Array.isArray(data.includeSkills) ? data.includeSkills : []);
+  const allowedKeys = new Set(Object.keys(schema.$defs.skillInstallHint.properties));
+  const seen = new Set();
+
+  data.skillInstallHints.forEach((hint, index) => {
+    if (!hint || typeof hint !== "object" || Array.isArray(hint)) {
+      fail(`${filePath}: skillInstallHints[${index}] must be an object`);
+      return;
+    }
+
+    for (const key of schema.$defs.skillInstallHint.required) {
+      if (!(key in hint)) fail(`${filePath}: skillInstallHints[${index}] missing ${key}`);
+    }
+
+    for (const key of Object.keys(hint)) {
+      if (!allowedKeys.has(key)) fail(`${filePath}: skillInstallHints[${index}] has unknown field ${key}`);
+    }
+
+    if (typeof hint.id !== "string" || !skillPattern.test(hint.id)) {
+      fail(`${filePath}: skillInstallHints[${index}].id is invalid`);
+    } else {
+      if (!includeSkills.has(hint.id)) {
+        fail(`${filePath}: skillInstallHints[${index}].id must match an includeSkills entry`);
+      }
+      if (seen.has(hint.id)) fail(`${filePath}: duplicate skillInstallHints id ${hint.id}`);
+      seen.add(hint.id);
+    }
+
+    if (typeof hint.source !== "string" || hint.source.trim() === "") {
+      fail(`${filePath}: skillInstallHints[${index}].source must be a non-empty string`);
+    }
+
+    if ("packageManager" in hint && hint.packageManager !== "skills") {
+      fail(`${filePath}: skillInstallHints[${index}].packageManager must be skills`);
+    }
+
+    if ("optional" in hint && typeof hint.optional !== "boolean") {
+      fail(`${filePath}: skillInstallHints[${index}].optional must be a boolean`);
+    }
+  });
 }
 
 function validateRecommendedTools(tools, filePath, schema) {
@@ -290,11 +342,20 @@ async function main() {
 
   if (!schema) return finish();
 
-  const entries = await readdir(disciplinesDir, { withFileTypes: true });
+  const publicResult = await validateDisciplineRoot(disciplinesDir, "disciplines", schema);
+  const fixtureResult = await validateDisciplineRoot(sampleDisciplinesDir, "fixtures/sample-disciplines", schema);
+
+  await validateResolverCases(fixtureResult.seenIds);
+
+  finish(publicResult.packageCount);
+}
+
+async function validateDisciplineRoot(rootDir, label, schema) {
+  const entries = await readdir(rootDir, { withFileTypes: true });
 
   for (const entry of entries) {
     if (entry.isFile() && entry.name.endsWith(".discipline.md")) {
-      fail(`disciplines/${entry.name}: legacy flat discipline files are not supported; use disciplines/<id>/DISCIPLINE.md`);
+      fail(`${label}/${entry.name}: legacy flat discipline files are not supported; use ${label}/<id>/DISCIPLINE.md`);
     }
   }
 
@@ -303,16 +364,12 @@ async function main() {
     .map((entry) => entry.name)
     .sort();
 
-  if (disciplinePackages.length === 0) {
-    fail("disciplines/: no discipline packages found; expected disciplines/<id>/DISCIPLINE.md");
-  }
-
   const seenIds = new Set();
 
   for (const packageName of disciplinePackages) {
-    const packagePath = path.join("disciplines", packageName);
+    const packagePath = path.join(label, packageName);
     const filePath = path.join(packagePath, "DISCIPLINE.md");
-    const absolutePath = path.join(disciplinesDir, packageName, "DISCIPLINE.md");
+    const absolutePath = path.join(rootDir, packageName, "DISCIPLINE.md");
     let source;
 
     try {
@@ -332,9 +389,7 @@ async function main() {
     validateDiscipline(data, filePath, schema, seenIds);
   }
 
-  await validateResolverCases(seenIds);
-
-  finish(disciplinePackages.length);
+  return { seenIds, packageCount: disciplinePackages.length };
 }
 
 async function validateSchemaFiles() {

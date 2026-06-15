@@ -12,6 +12,7 @@ import {
 
 const root = process.cwd();
 const resolverCasesPath = path.join(root, "fixtures", "resolver-cases.jsonc");
+const fixtureDisciplinesRoot = path.join(root, "fixtures", "sample-disciplines");
 
 async function loadCases() {
   const source = await readFile(resolverCasesPath, "utf8");
@@ -58,7 +59,7 @@ This should fail before scoring.
 }
 
 async function main() {
-  const disciplines = await loadDisciplines(root);
+  const disciplines = await loadDisciplines(fixtureDisciplinesRoot);
   const cases = await loadCases();
   const failures = [];
 

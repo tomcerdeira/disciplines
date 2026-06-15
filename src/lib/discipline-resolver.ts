@@ -15,6 +15,13 @@ export interface RecommendedTool {
   optional?: boolean;
 }
 
+export interface SkillInstallHint {
+  id: string;
+  source: string;
+  packageManager?: "skills";
+  optional?: boolean;
+}
+
 export interface PromptSignals {
   phrases: string[];
   allOf: string[][];
@@ -35,6 +42,7 @@ export interface Discipline {
   version: string;
   description: string;
   includeSkills: string[];
+  skillInstallHints?: SkillInstallHint[];
   softExcludeSkills: string[];
   recommendedTools: RecommendedTool[];
   activation: DisciplineActivation;
@@ -90,6 +98,7 @@ export interface ResolverBundle {
   }>;
   activationMatches: Array<ActivationMatches & { disciplineId: string }>;
   includeSkills: string[];
+  skillInstallHints?: SkillInstallHint[];
   recommendedTools: RecommendedTool[];
   softExcludeSkills: string[];
   prompts?: Array<{
@@ -112,6 +121,13 @@ const recommendedToolSchema = z.object({
   optional: z.boolean().optional(),
 }).strict();
 
+const skillInstallHintSchema = z.object({
+  id: z.string().regex(portableIdPattern),
+  source: z.string().min(1),
+  packageManager: z.enum(["skills"]).optional(),
+  optional: z.boolean().optional(),
+}).strict();
+
 const promptSignalsSchema = z.object({
   phrases: z.array(z.string().min(1)),
   allOf: z.array(z.array(z.string().min(1)).min(1)),
@@ -126,6 +142,7 @@ const disciplineFrontmatterSchema = z.object({
   description: z.string().min(1),
   aliases: z.array(z.string().min(1)).optional(),
   includeSkills: z.array(z.string().regex(portableIdPattern)).min(1),
+  skillInstallHints: z.array(skillInstallHintSchema).optional(),
   recommendedTools: z.array(recommendedToolSchema),
   softExcludeSkills: z.array(z.string().regex(portableIdPattern)),
   activation: z.object({
@@ -365,6 +382,7 @@ export function createResolverBundle(input: ResolverInput, disciplines: Discipli
   const selectedDisciplines = selectedDisciplineEntries(resolution, disciplines);
   const scoreByDiscipline = new Map<string, DisciplineScore>(resolution.scored.map((score) => [score.disciplineId, score]));
   const includeSkills = unique(selectedDisciplines.flatMap((discipline) => discipline.includeSkills));
+  const skillInstallHints = unique(selectedDisciplines.flatMap((discipline) => discipline.skillInstallHints ?? []));
   const includeSkillSet = new Set(includeSkills);
   const softExcludeSkills = unique(selectedDisciplines.flatMap((discipline) => discipline.softExcludeSkills))
     .filter((skillId) => !includeSkillSet.has(skillId));
@@ -376,6 +394,7 @@ export function createResolverBundle(input: ResolverInput, disciplines: Discipli
       selectedDisciplines: [],
       activationMatches: [],
       includeSkills: [],
+      skillInstallHints: [],
       recommendedTools: [],
       softExcludeSkills: [],
       reason: "No available discipline reached the activation threshold.",
@@ -396,6 +415,7 @@ export function createResolverBundle(input: ResolverInput, disciplines: Discipli
         ...score.matches,
       })),
       includeSkills: [],
+      skillInstallHints: [],
       recommendedTools: [],
       softExcludeSkills: [],
       scores: resolution.scored,
@@ -425,6 +445,7 @@ export function createResolverBundle(input: ResolverInput, disciplines: Discipli
       }),
     })),
     includeSkills,
+    skillInstallHints,
     recommendedTools: selectedDisciplines.flatMap((discipline) => discipline.recommendedTools),
     softExcludeSkills,
     prompts: selectedDisciplines.map((discipline) => ({

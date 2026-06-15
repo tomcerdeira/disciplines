@@ -11,6 +11,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { cancel, intro, isCancel, outro, text } from "@clack/prompts";
 import { Command } from "commander";
+import pc from "picocolors";
 import { z } from "zod";
 import {
   createResolverBundle,
@@ -28,6 +29,7 @@ const PROJECT_STORE_ROOT = path.join(process.cwd(), ".agents");
 const MANIFEST_FILE = ".disciplines-manifest.json";
 const CONFIG_FILE = "disciplines.json";
 const LOCK_FILE = "disciplines-lock.json";
+const CATALOG_FILE = path.join(CLI_ROOT, "catalog", "disciplines.json");
 
 const manifestEntrySchema = z.object({
   id: z.string().min(1),
@@ -74,6 +76,35 @@ const lockfileSchema = z.object({
   version: z.number().int().positive(),
   disciplines: z.array(lockEntrySchema),
 }).strict();
+
+const catalogEntrySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().min(1),
+  source: z.string().min(1),
+  discipline: z.string().min(1),
+  tags: z.array(z.string().min(1)).default([]),
+  agents: z.array(z.string().min(1)).default([]),
+  tools: z.array(z.string().min(1)).default([]),
+}).strict();
+
+const catalogSchema = z.object({
+  version: z.number().int().positive(),
+  updatedAt: z.string().min(1),
+  disciplines: z.array(catalogEntrySchema),
+}).strict();
+
+function statusLabel(status) {
+  if (status === "OK") return pc.green(status);
+  if (status === "FAIL") return pc.red(status);
+  if (status === "WARN") return pc.yellow(status);
+  if (status === "UPDATE") return pc.cyan(status);
+  return pc.dim(status);
+}
+
+function printAction(action, label, detail = "") {
+  console.log(`${pc.cyan(action)}\t${label}${detail ? `\t${detail}` : ""}`);
+}
 
 function sourceSlug(source) {
   return source
@@ -334,7 +365,15 @@ ${runtimeCommand(scope)} --task "$ARGUMENTS"
 
 If relevant files, commands, logs, or errors are already known, include them as \`--file\` and \`--command\` arguments.
 
-Return the resolver output first, then proceed with the task under the selected discipline. If the resolver returns \`ask\`, ask the user to choose. If it returns \`none\`, proceed without a discipline and mention that no discipline matched.
+Then check whether the selected discipline's skills and recommended tools are available:
+
+\`\`\`sh
+npx disciplines prepare installed --task "$ARGUMENTS"
+\`\`\`
+
+Return the resolver output first. If readiness reports missing or unknown capabilities, ask the user whether to install/configure them, skip them for now, or continue with available capabilities. When readiness suggests \`npx skills add ... --skill ...\`, treat it as a proposed Vercel Skills CLI command and run it only after user approval. Do not install anything silently.
+
+Then proceed with the task under the selected discipline. If the resolver returns \`ask\`, ask the user to choose. If it returns \`none\`, proceed without a discipline and mention that no discipline matched.
 `;
 }
 
@@ -513,6 +552,56 @@ async function commandFind(query, options) {
   }
 }
 
+async function readCatalog(catalogPath = CATALOG_FILE) {
+  const json = JSON.parse(await readFile(catalogPath, "utf8"));
+  const parsed = catalogSchema.safeParse(json);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const issuePath = issue.path.length > 0 ? issue.path.join(".") : "catalog";
+    throw new Error(`${catalogPath}: invalid catalog at ${issuePath}: ${issue.message}`);
+  }
+  return parsed.data;
+}
+
+function catalogSearchText(entry) {
+  return [
+    entry.id,
+    entry.name,
+    entry.description,
+    entry.source,
+    entry.discipline,
+    ...entry.tags,
+    ...entry.agents,
+    ...entry.tools,
+  ].join(" ").toLowerCase();
+}
+
+function printCatalogEntry(entry, { verbose = false } = {}) {
+  console.log(`${entry.id}\t${entry.name}\t${entry.source}@${entry.discipline}`);
+  if (verbose) {
+    console.log(`  ${entry.description}`);
+    if (entry.tags.length > 0) console.log(`  tags: ${entry.tags.join(", ")}`);
+    if (entry.tools.length > 0) console.log(`  tools: ${entry.tools.join(", ")}`);
+    console.log(`  add: disciplines add ${entry.source} --discipline ${entry.discipline}`);
+  }
+}
+
+async function commandCatalog(query, options) {
+  const catalog = await readCatalog(options.catalog);
+  const needle = (query ?? "").toLowerCase();
+  const rows = needle
+    ? catalog.disciplines.filter((entry) => catalogSearchText(entry).includes(needle))
+    : catalog.disciplines;
+
+  if (rows.length === 0) {
+    printAction("empty", "catalog", query ? `no matches for ${query}` : "no entries");
+    return;
+  }
+
+  for (const entry of rows) printCatalogEntry(entry, { verbose: options.verbose });
+  printAction("catalog", `${rows.length} discipline(s)`, `source ${options.catalog ?? path.relative(process.cwd(), CATALOG_FILE)}`);
+}
+
 function bundleForSelected(task, selected: Discipline[]): ResolverBundle {
   const includeSkills = [...new Set(selected.flatMap((discipline) => discipline.includeSkills))];
   const includeSkillSet = new Set(includeSkills);
@@ -534,6 +623,7 @@ function bundleForSelected(task, selected: Discipline[]): ResolverBundle {
       promptSignals: ["explicit selection"],
     })),
     includeSkills,
+    skillInstallHints: selected.flatMap((discipline) => discipline.skillInstallHints ?? []),
     recommendedTools: selected.flatMap((discipline) => discipline.recommendedTools),
     softExcludeSkills: [...new Set(selected.flatMap((discipline) => discipline.softExcludeSkills))]
       .filter((skillId) => !includeSkillSet.has(skillId)),
@@ -544,6 +634,147 @@ function bundleForSelected(task, selected: Discipline[]): ResolverBundle {
     ],
     scores: [],
   };
+}
+
+function skillProbePaths(skillId, agent = "*") {
+  const home = os.homedir();
+  const paths = [];
+  const agents = agent === "*" ? AGENTS : [agent];
+  if (agents.includes("codex")) {
+    paths.push(
+      path.join(home, ".codex", "skills", skillId, "SKILL.md"),
+      path.join(home, ".agents", "skills", skillId, "SKILL.md"),
+    );
+  }
+  if (agents.includes("claude-code")) {
+    paths.push(path.join(home, ".claude", "skills", skillId, "SKILL.md"));
+  }
+  return [...new Set(paths)];
+}
+
+function installCommandForSkill(skillId, hint) {
+  if (!hint) return null;
+  const packageManager = hint.packageManager ?? "skills";
+  if (packageManager !== "skills") return null;
+  return `npx skills add ${hint.source} --skill ${skillId}`;
+}
+
+function detectSkill(skillId, agent = "*", hint = null) {
+  const paths = skillProbePaths(skillId, agent);
+  const found = paths.find((candidate) => existsSync(candidate));
+  const installCommand = installCommandForSkill(skillId, hint);
+  if (found) return { id: skillId, kind: "skill", status: "ok", detail: found, installCommand };
+  if (paths.length === 0) {
+    return { id: skillId, kind: "skill", status: "unknown", detail: `No known skill store for agent '${agent}'.`, installCommand };
+  }
+  return { id: skillId, kind: "skill", status: "missing", detail: `Not found in ${paths.length} known skill store(s).`, installCommand };
+}
+
+async function commandExists(command) {
+  try {
+    await execFileAsync("which", [command]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function detectPackageManager() {
+  const candidates = [
+    ["bun", "bun.lockb"],
+    ["pnpm", "pnpm-lock.yaml"],
+    ["yarn", "yarn.lock"],
+    ["npm", "package-lock.json"],
+  ];
+  for (const [command, lockfile] of candidates) {
+    if (existsSync(path.join(projectRoot(), lockfile)) && await commandExists(command)) {
+      return { id: "package-manager", kind: "tool", status: "ok", detail: `${command} detected from ${lockfile}` };
+    }
+  }
+  for (const command of ["bun", "pnpm", "yarn", "npm"]) {
+    if (await commandExists(command)) return { id: "package-manager", kind: "tool", status: "ok", detail: `${command} available` };
+  }
+  return { id: "package-manager", kind: "tool", status: "missing", detail: "No npm, pnpm, yarn, or bun executable found." };
+}
+
+async function detectTool(tool) {
+  if (tool.kind === "package-manager" || tool.id === "package-manager") return detectPackageManager();
+  if (tool.kind === "cli" || tool.kind === "runtime") {
+    const found = await commandExists(tool.id);
+    return {
+      id: tool.id,
+      kind: "tool",
+      status: found ? "ok" : "missing",
+      detail: found ? `${tool.id} is on PATH` : `${tool.id} is not on PATH`,
+      purpose: tool.purpose,
+    };
+  }
+  if (tool.kind === "browser" && (await commandExists("npx") || await commandExists("open"))) {
+    return { id: tool.id, kind: "tool", status: "ok", detail: "Browser access may be available through local runtime commands.", purpose: tool.purpose };
+  }
+  return {
+    id: tool.id,
+    kind: "tool",
+    status: "unknown",
+    detail: `${tool.kind} availability is runtime-specific; ask the user before installing or configuring it.`,
+    purpose: tool.purpose,
+  };
+}
+
+async function readinessForBundle(bundle: ResolverBundle, options) {
+  const agent = options.agentName ?? "*";
+  const hintBySkill = new Map((bundle.skillInstallHints ?? []).map((hint) => [hint.id, hint]));
+  const skills = bundle.includeSkills.map((skillId) => detectSkill(skillId, agent, hintBySkill.get(skillId)));
+  const tools = [];
+  for (const tool of bundle.recommendedTools) tools.push(await detectTool(tool));
+  return { agent, skills, tools };
+}
+
+function readinessStatusLabel(status) {
+  if (status === "ok") return "OK";
+  if (status === "missing") return "MISSING";
+  return "UNKNOWN";
+}
+
+function formatReadinessPrompt(bundle: ResolverBundle, readiness) {
+  const lines = [
+    "# Discipline Readiness",
+    "",
+    `Decision: ${bundle.decision}`,
+    `Agent: ${readiness.agent}`,
+  ];
+  if (bundle.selectedDisciplines.length > 0) {
+    lines.push(`Disciplines: ${bundle.selectedDisciplines.map((discipline) => discipline.id).join(", ")}`);
+  }
+  lines.push("", "## Capability Checks");
+
+  for (const item of [...readiness.skills, ...readiness.tools]) {
+    lines.push(`${readinessStatusLabel(item.status)}\t${item.kind}\t${item.id}\t${item.detail}`);
+    if (item.purpose) lines.push(`  purpose: ${item.purpose}`);
+    if (item.installCommand && item.status !== "ok") lines.push(`  install after approval: ${item.installCommand}`);
+  }
+
+  const missing = [...readiness.skills, ...readiness.tools].filter((item) => item.status === "missing" || item.status === "unknown");
+  lines.push("", "## Agent Instruction");
+  if (missing.length === 0) {
+    lines.push("All checked capabilities appear available. Proceed with the selected discipline.");
+  } else {
+    lines.push("Before relying on the missing or unknown capabilities, ask the user whether they want to install, configure, or skip them for this task.");
+    lines.push("Do not install MCPs, CLIs, plugins, services, or skills silently.");
+    lines.push("");
+    lines.push("Suggested user prompt:");
+    lines.push("");
+    lines.push(`This discipline works best with: ${missing.map((item) => `${item.id} (${item.kind})`).join(", ")}.`);
+    lines.push("I do not see all of those available in this runtime. Do you want me to help install/configure them, skip them for now, or continue with the available capabilities?");
+    const installCommands = missing.map((item) => item.installCommand).filter(Boolean);
+    if (installCommands.length > 0) {
+      lines.push("");
+      lines.push("If the user approves skill installation, use:");
+      for (const command of [...new Set(installCommands)]) lines.push(`- ${command}`);
+    }
+  }
+
+  return lines.join("\n");
 }
 
 async function commandUse(sourceArg, options) {
@@ -566,6 +797,30 @@ async function commandUse(sourceArg, options) {
     return;
   }
   console.log(formatPromptBundle(bundle));
+}
+
+async function commandPrepare(sourceArg, options) {
+  if (!["prompt", "json"].includes(options.format)) throw new Error("--format must be prompt or json");
+  const spec = parseSourceSpec(sourceArg);
+  const sourceInfo = await resolveSource(spec.source);
+  const disciplines = await loadDisciplinesFromSource(sourceInfo.root);
+  const selection = selectedIdsFromOptions(options, spec.discipline);
+  const selected = filterDisciplines(disciplines, selection, { defaultAll: false });
+
+  const input = {
+    task: options.task ?? "",
+    repoSignals: { files: options.files.filter(Boolean) },
+    commands: options.commands.filter(Boolean),
+  };
+  const bundle = selected.length > 0 ? bundleForSelected(options.task, selected) : createResolverBundle(input, disciplines);
+  const readiness = await readinessForBundle(bundle, options);
+
+  if (options.format === "json") {
+    console.log(JSON.stringify({ bundle, readiness }, null, 2));
+    return;
+  }
+
+  console.log(formatReadinessPrompt(bundle, readiness));
 }
 
 async function commandAdd(sourceArg, options) {
@@ -966,7 +1221,7 @@ async function commandInit(name) {
 }
 
 function doctorLine(status, label, detail = "") {
-  console.log(`${status}\t${label}${detail ? `\t${detail}` : ""}`);
+  console.log(`${statusLabel(status)}\t${label}${detail ? `\t${detail}` : ""}`);
 }
 
 async function pathStatus(filePath) {
@@ -1187,6 +1442,63 @@ async function commandCleanup(options) {
   console.log(`cleanup\tremoved ${removed} item(s)`);
 }
 
+async function runCliSmoke(args, cwd, env = {}) {
+  return execFileAsync(process.execPath, [fileURLToPath(import.meta.url), ...args], {
+    cwd,
+    env: { ...process.env, ...env },
+    maxBuffer: 1024 * 1024 * 10,
+  });
+}
+
+async function commandSmoke(options) {
+  if (!options.source) {
+    throw new Error("smoke requires --source until this package includes a public discipline package");
+  }
+  const sourceInfo = await resolveSource(options.source);
+  const sourceDisciplines = await loadDisciplinesFromSource(sourceInfo.root);
+  const selected = filterDisciplines(sourceDisciplines, selectedIdsFromOptions(options), { defaultAll: true });
+  const smokeDiscipline = selected[0];
+  if (!smokeDiscipline) throw new Error(`No discipline packages found in ${options.source}`);
+
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "disciplines-smoke-"));
+  const home = path.join(tmp, "home");
+  const project = path.join(tmp, "project");
+  await mkdir(project, { recursive: true });
+  await writeFile(path.join(project, "package.json"), JSON.stringify({ private: true, type: "module" }, null, 2));
+
+  const source = options.source;
+  const env = { HOME: home };
+
+  try {
+    printAction("smoke", "project", project);
+    await runCliSmoke(["add", source, "--discipline", smokeDiscipline.id, "--project", "--agent", "codex", "--yes"], project, env);
+    printAction("OK", "add", `${smokeDiscipline.id} installed with Codex glue`);
+
+    const list = await runCliSmoke(["list", "--project"], project, env);
+    if (!list.stdout.includes(smokeDiscipline.id)) throw new Error(`smoke list did not include ${smokeDiscipline.id}`);
+    printAction("OK", "list", `${smokeDiscipline.id} visible`);
+
+    const use = await runCliSmoke([
+      "use",
+      "installed",
+      "--discipline",
+      smokeDiscipline.id,
+      "--task",
+      `Smoke test the ${smokeDiscipline.name} discipline.`,
+    ], project, env);
+    if (!use.stdout.includes(smokeDiscipline.id)) throw new Error(`smoke resolver did not select ${smokeDiscipline.id}`);
+    printAction("OK", "use", `resolver selected ${smokeDiscipline.id}`);
+
+    const doctor = await runCliSmoke(["doctor", "--project"], project, env);
+    if (!doctor.stdout.includes("OK\tdoctor")) throw new Error("smoke doctor did not pass");
+    printAction("OK", "doctor", "no blocking issues");
+
+    printAction("smoke", "passed", options.keep ? project : "fresh-project workflow");
+  } finally {
+    if (!options.keep) await rm(tmp, { recursive: true, force: true });
+  }
+}
+
 async function packageVersion() {
   const packageJson = JSON.parse(await readFile(path.join(CLI_ROOT, "package.json"), "utf8"));
   return packageJson.version;
@@ -1217,6 +1529,11 @@ function normalizedOptions(raw, positional = []) {
     lockfile: options.lockfile,
     lock: options.lock,
     cleanDisciplines: Boolean(options.disciplines),
+    catalog: options.catalog,
+    source: options.source,
+    verbose: Boolean(options.verbose),
+    keep: Boolean(options.keep),
+    agentName: options.agentName,
   };
 }
 
@@ -1242,19 +1559,22 @@ async function main() {
     .showHelpAfterError()
     .addHelpText("after", `
 Sources:
-  tomcerdeira/disciplines
-  https://github.com/tomcerdeira/disciplines
-  https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
+  owner/disciplines
+  https://github.com/org/disciplines
+  https://github.com/org/disciplines/tree/main/disciplines/software-engineer
   https://gitlab.com/org/repo
-  https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
-  git@github.com:tomcerdeira/disciplines.git
+  https://gitlab.com/org/repo/-/tree/main/disciplines/software-engineer
+  git@github.com:org/disciplines.git
   ./local-disciplines
 
 Examples:
-  disciplines add tomcerdeira/disciplines --discipline frontend-engineer
-  disciplines add tomcerdeira/disciplines --all --agent '*' --global --yes
-  disciplines use tomcerdeira/disciplines@frontend-engineer
+  disciplines add owner/disciplines --discipline software-engineer
+  disciplines add owner/disciplines --all --agent '*' --global --yes
+  disciplines use owner/disciplines@software-engineer
   disciplines use installed --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
+  disciplines prepare installed --task "Fix keyboard navigation" --agent-name codex
+  disciplines search frontend --verbose
+  disciplines smoke --source owner/disciplines
   disciplines check
   disciplines doctor
 `);
@@ -1285,6 +1605,15 @@ Examples:
     .option("--format <format>", "Output format: prompt or json", "prompt"))
     .action((source, raw) => commandUse(source, normalizedOptions(raw)));
 
+  addSelectionOptions(program.command("prepare <source>")
+    .description("Check selected discipline skills/tools and print user-approved setup guidance")
+    .option("--task <text>", "Task text to resolve")
+    .option("--file <paths...>", "Relevant file paths")
+    .option("--command <commands...>", "Relevant verification or workflow commands")
+    .option("--agent-name <agent>", "Agent runtime to check: claude-code, codex, cursor, or '*'", "*")
+    .option("--format <format>", "Output format: prompt or json", "prompt"))
+    .action((source, raw) => commandPrepare(source, normalizedOptions(raw)));
+
   addScopeOptions(program.command("list [source]")
     .alias("ls")
     .description("List installed disciplines or inspect a source"))
@@ -1294,6 +1623,19 @@ Examples:
   addScopeOptions(program.command("find [query]")
     .description("Search installed disciplines"))
     .action((query, raw) => commandFind(query, normalizedOptions(raw)));
+
+  program.command("catalog [query]")
+    .alias("browse")
+    .description("Browse the packaged discipline catalog")
+    .option("--catalog <path>", "Catalog JSON path")
+    .option("--verbose", "Print descriptions, tags, tools, and install commands")
+    .action((query, raw) => commandCatalog(query, normalizedOptions(raw)));
+
+  program.command("search [query]")
+    .description("Search the packaged discipline catalog")
+    .option("--catalog <path>", "Catalog JSON path")
+    .option("--verbose", "Print descriptions, tags, tools, and install commands")
+    .action((query, raw) => commandCatalog(query, normalizedOptions(raw)));
 
   addScopeOptions(addSelectionOptions(program.command("check [ids...]")
     .description("Check installed disciplines for source updates")))
@@ -1324,6 +1666,12 @@ Examples:
     .option("--all", "Alias for --disciplines")
     .option("-y, --yes", "Skip confirmation prompts"))
     .action((raw) => commandCleanup(normalizedOptions(raw)));
+
+  addSelectionOptions(program.command("smoke")
+    .description("Run a fresh-project install, doctor, and resolver smoke test")
+    .option("--source <source>", "Source to install during the smoke test")
+    .option("--keep", "Keep the temporary smoke project"))
+    .action((raw) => commandSmoke(normalizedOptions(raw)));
 
   program.command("version")
     .description("Print the package version")

@@ -21,6 +21,7 @@ async function main() {
 
   const listing = await execFileAsync("tar", ["-tf", tarball]);
   for (const expected of [
+    "package/catalog/disciplines.json",
     "package/dist/disciplines.js",
     "package/src/disciplines.ts",
     "package/package.json",

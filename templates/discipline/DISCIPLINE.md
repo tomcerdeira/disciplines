@@ -6,6 +6,11 @@ description: Describe when this discipline should guide an agent.
 includeSkills:
   - primary-skill
   - supporting-skill
+skillInstallHints:
+  - id: primary-skill
+    source: owner/skills-repo
+    packageManager: skills
+    optional: true
 softExcludeSkills:
   - adjacent-domain-skill
 recommendedTools:

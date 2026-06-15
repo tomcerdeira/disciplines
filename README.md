@@ -3,8 +3,11 @@
 Agent Disciplines is a small package manager and resolver for portable agent context profiles. A discipline is an advisory curation layer over agent skills and tools: it helps an agent choose relevant context first, without hiding skills, enforcing policy, or installing MCPs/CLIs automatically.
 
 ```sh
-npx disciplines add tomcerdeira/disciplines --all --agent '*' --global
+npx disciplines add owner/disciplines --all --agent '*' --global
 npx disciplines use installed --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
+npx disciplines prepare installed --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
+npx disciplines search frontend
+npx disciplines smoke --source owner/disciplines
 npx disciplines doctor
 ```
 
@@ -20,7 +23,7 @@ A discipline package is a folder with a `DISCIPLINE.md` entrypoint:
 
 ```text
 disciplines/
-  frontend-engineer/
+  software-engineer/
     DISCIPLINE.md
 ```
 
@@ -28,8 +31,8 @@ disciplines/
 
 ```yaml
 ---
-id: frontend-engineer
-name: Frontend Engineer
+id: software-engineer
+name: Software Engineer
 version: 0.1.0
 description: Focuses agents on UI implementation, accessibility, interaction design, and browser verification.
 includeSkills:
@@ -59,7 +62,7 @@ activation:
   minScore: 6.5
 ---
 
-You are operating under the Frontend Engineer discipline.
+You are operating under the Software Engineer discipline.
 Prefer UI, interaction, accessibility, and browser-verification context.
 Treat backend, database, and infrastructure skills as soft exclusions unless concrete evidence requires them.
 ```
@@ -77,14 +80,14 @@ Authoring guide: [docs/authoring-disciplines.md](docs/authoring-disciplines.md)
 Install disciplines from a source:
 
 ```sh
-npx disciplines add tomcerdeira/disciplines --discipline frontend-engineer
-npx disciplines add tomcerdeira/disciplines --all --agent '*' --global --yes
+npx disciplines add owner/disciplines --discipline software-engineer
+npx disciplines add owner/disciplines --all --agent '*' --global --yes
 ```
 
 Use a discipline without installing:
 
 ```sh
-npx disciplines use tomcerdeira/disciplines@frontend-engineer
+npx disciplines use owner/disciplines@software-engineer
 ```
 
 Resolve a task against installed disciplines:
@@ -95,17 +98,46 @@ npx disciplines use installed \
   --file src/components/SearchResults.tsx
 ```
 
+Check whether the selected discipline's skills and recommended tools are available:
+
+```sh
+npx disciplines prepare installed \
+  --task "Fix keyboard navigation in SearchResults.tsx" \
+  --file src/components/SearchResults.tsx \
+  --agent-name codex
+```
+
+`prepare` is designed for agents as much as humans. If it reports missing or unknown skills, MCPs, CLIs, or services, the agent should ask the user whether to install/configure them, skip them for now, or continue with available capabilities. It should not install anything silently.
+
+Disciplines can include `skillInstallHints` so `prepare` can suggest Vercel Skills CLI commands for missing skills:
+
+```yaml
+skillInstallHints:
+  - id: vercel-react-best-practices
+    source: vercel-labs/agent-skills
+    packageManager: skills
+```
+
+When that skill is missing, `prepare` tells the agent to ask before running:
+
+```sh
+npx skills add vercel-labs/agent-skills --skill vercel-react-best-practices
+```
+
 Inspect and manage installs:
 
 ```sh
+npx disciplines catalog
+npx disciplines search frontend --verbose
 npx disciplines install
 npx disciplines list
 npx disciplines find frontend
 npx disciplines check
 npx disciplines update
-npx disciplines remove frontend-engineer
+npx disciplines remove software-engineer
 npx disciplines doctor
 npx disciplines cleanup
+npx disciplines smoke --source owner/disciplines
 ```
 
 Create a new discipline:
@@ -119,13 +151,19 @@ Supported source formats include GitHub shorthand, full GitHub URLs, GitHub tree
 ```sh
 npx disciplines add tomcerdeira/disciplines
 npx disciplines add https://github.com/tomcerdeira/disciplines
-npx disciplines add https://github.com/tomcerdeira/disciplines/tree/main/disciplines/frontend-engineer
+npx disciplines add https://github.com/org/disciplines/tree/main/disciplines/software-engineer
 npx disciplines add https://gitlab.com/org/repo
-npx disciplines add https://gitlab.com/org/repo/-/tree/main/disciplines/frontend-engineer
+npx disciplines add https://gitlab.com/org/repo/-/tree/main/disciplines/software-engineer
 npx disciplines add ./local-disciplines
 ```
 
 Full CLI reference: [docs/cli.md](docs/cli.md)
+
+Discovery and adapter notes:
+
+- `catalog`, `browse`, and `search` read the package-shipped catalog at [catalog/disciplines.json](catalog/disciplines.json). The catalog is intentionally empty until this repo has real public disciplines.
+- `smoke --source <source>` creates a temporary project, installs a discipline, runs `doctor`, and resolves a realistic task. Use it after publishing or installing a new package version.
+- Agent auto-discovery still depends on each runtime. The CLI writes Claude Code, Codex, and Cursor glue when you pass `--agent`; see [docs/agent-discovery.md](docs/agent-discovery.md).
 
 Projects can commit a small `disciplines.json` for reproducible setup:
 
@@ -135,7 +173,7 @@ Projects can commit a small `disciplines.json` for reproducible setup:
   "disciplines": [
     {
       "source": "tomcerdeira/disciplines",
-      "discipline": "frontend-engineer",
+      "discipline": "software-engineer",
       "agents": ["codex"]
     }
   ]
@@ -187,15 +225,11 @@ Each store has a local `.disciplines-manifest.json` that records installed ids, 
 
 `cleanup` removes stale `agent-degrees` files from older installs. Use `--disciplines` only when you also want to remove current installed discipline stores and agent glue.
 
-## Included Examples
+## Public Disciplines
 
-- [Frontend Engineer](disciplines/frontend-engineer/DISCIPLINE.md)
-- [Backend Engineer](disciplines/backend-engineer/DISCIPLINE.md)
-- [Data Analyst](disciplines/data-analyst/DISCIPLINE.md)
-- [Automation Engineer](disciplines/automation-engineer/DISCIPLINE.md)
-- [Product Researcher](disciplines/product-researcher/DISCIPLINE.md)
+This package currently ships the CLI, schema, templates, docs, and resolver. The public `disciplines/` catalog is intentionally empty while the first real discipline is authored.
 
-These are examples, not a universal ontology. Real teams should rename skill ids and activation signals to match their local agent setup.
+Use `npx disciplines init <name>` to create a new discipline package, then add it to [catalog/disciplines.json](catalog/disciplines.json) when it is ready to publish.
 
 ## Development
 
@@ -210,6 +244,7 @@ Useful local smoke tests:
 npm run build
 node dist/disciplines.js list .
 node dist/disciplines.js use . --task "Fix keyboard navigation" --file src/components/SearchResults.tsx
+node dist/disciplines.js smoke --source fixtures/sample-disciplines
 npm run check:release
 ```
 

@@ -109,6 +109,28 @@ Good included skills are:
 
 Avoid including skills just because they might become useful later. Those belong in another discipline or can be loaded after evidence appears.
 
+## Add `skillInstallHints`
+
+When an included skill is available from a known skills package, add an install hint. This lets `disciplines prepare` tell the agent exactly what to ask the user before installing.
+
+```yaml
+includeSkills:
+  - vercel-react-best-practices
+  - frontend-design
+skillInstallHints:
+  - id: vercel-react-best-practices
+    source: vercel-labs/agent-skills
+    packageManager: skills
+```
+
+The `id` must match an `includeSkills` entry. `source` should be the package source accepted by Vercel's Skills CLI. For a specific skill in a multi-skill repo, `prepare` suggests:
+
+```sh
+npx skills add vercel-labs/agent-skills --skill vercel-react-best-practices
+```
+
+Do not add fake sources just to make every skill installable. If a skill is team-local or only conceptual, leave it without a hint so `prepare` reports it as missing without an install command.
+
 ## Write `softExcludeSkills`
 
 Soft exclusions are not bans. They are reminders to keep unrelated context out of the initial bundle.

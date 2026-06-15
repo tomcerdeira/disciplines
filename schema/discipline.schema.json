@@ -46,6 +46,14 @@
       "uniqueItems": true,
       "minItems": 1
     },
+    "skillInstallHints": {
+      "type": "array",
+      "description": "Optional source hints for installing missing included skills after user approval.",
+      "items": {
+        "$ref": "#/$defs/skillInstallHint"
+      },
+      "default": []
+    },
     "softExcludeSkills": {
       "type": "array",
       "description": "Skill ids or skill-family ids to avoid unless requested by the user or justified by concrete task evidence.",
@@ -94,6 +102,34 @@
       "type": "string",
       "description": "Portable skill reference. Runtime adapters may map this to local skill names.",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "skillInstallHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/skillId",
+          "description": "Included skill id this install hint describes."
+        },
+        "source": {
+          "type": "string",
+          "description": "Skills package source, usually an owner/repo accepted by `npx skills add`.",
+          "minLength": 1,
+          "examples": ["vercel-labs/agent-skills"]
+        },
+        "packageManager": {
+          "type": "string",
+          "description": "External package manager to use after user approval.",
+          "enum": ["skills"],
+          "default": "skills"
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Whether the skill is helpful but not required for the discipline.",
+          "default": true
+        }
+      }
     },
     "toolRecommendation": {
       "type": "object",

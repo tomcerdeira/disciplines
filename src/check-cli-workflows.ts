@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const root = process.cwd();
 const cli = path.join(root, "dist", "disciplines.js");
+const fixtureSource = path.join(root, "fixtures", "sample-disciplines");
 
 async function run(args, options: any = {}) {
   return execFileAsync("node", [cli, ...args], {
@@ -33,12 +34,13 @@ function assert(condition, message) {
 
 async function main() {
   const projectDir = await mkdtemp(path.join(os.tmpdir(), "disciplines-project-"));
+  const prepareHome = await mkdtemp(path.join(os.tmpdir(), "disciplines-prepare-home-"));
 
-  await run(["add", root, "--discipline", "frontend-engineer", "--project", "--yes"], { cwd: projectDir });
+  await run(["add", fixtureSource, "--discipline", "frontend-engineer", "--project", "--yes"], { cwd: projectDir });
   assert(!existsSync(path.join(projectDir, "AGENTS.md")), "add wrote Codex glue without --agent");
   assert(!existsSync(path.join(projectDir, "CLAUDE.md")), "add wrote Claude glue without --agent");
 
-  await run(["add", root, "--discipline", "frontend-engineer", "--project", "--agent", "codex", "--yes"], { cwd: projectDir });
+  await run(["add", fixtureSource, "--discipline", "frontend-engineer", "--project", "--agent", "codex", "--yes"], { cwd: projectDir });
   assert(existsSync(path.join(projectDir, "AGENTS.md")), "add --agent codex did not write Codex glue");
 
   const projectList = await run(["list", "--project"], { cwd: projectDir });
@@ -47,9 +49,37 @@ async function main() {
   const projectFind = await run(["find", "react", "--project"], { cwd: projectDir });
   assert(projectFind.stdout.includes("frontend-engineer"), "project find did not include frontend-engineer");
 
+  const catalog = await run(["catalog"]);
+  assert(catalog.stdout.includes("catalog\t") || catalog.stdout.includes("empty\tcatalog"), "catalog did not print summary");
+
+  const catalogSearch = await run(["search", "automation"]);
+  assert(catalogSearch.stdout.includes("catalog\t") || catalogSearch.stdout.includes("empty\tcatalog"), "search did not print summary");
+
+  const catalogBrowse = await run(["browse", "frontend", "--verbose"]);
+  assert(catalogBrowse.stdout.includes("catalog\t") || catalogBrowse.stdout.includes("empty\tcatalog"), "browse did not print summary");
+
   const projectUse = await run(["use", "installed", "--task", "Fix keyboard navigation", "--file", "src/components/SearchResults.tsx"], { cwd: projectDir });
   assert(projectUse.stdout.includes("Selected disciplines:"), "use installed did not print resolver bundle");
   assert(projectUse.stdout.includes("frontend-engineer"), "use installed did not select frontend-engineer");
+
+  const projectPrepare = await run(["prepare", "installed", "--task", "Fix keyboard navigation", "--file", "src/components/SearchResults.tsx", "--agent-name", "codex"], {
+    cwd: projectDir,
+    env: { HOME: prepareHome },
+  });
+  assert(projectPrepare.stdout.includes("# Discipline Readiness"), "prepare did not print readiness output");
+  assert(projectPrepare.stdout.includes("Disciplines: frontend-engineer"), "prepare did not resolve frontend-engineer");
+  assert(projectPrepare.stdout.includes("MISSING\tskill\treact-best-practices"), "prepare did not report missing skill");
+  assert(projectPrepare.stdout.includes("ask the user whether they want to install"), "prepare did not instruct the agent to ask the user");
+  assert(projectPrepare.stdout.includes("npx skills add vercel-labs/agent-skills --skill react-best-practices"), "prepare did not include skills CLI install command");
+
+  const projectPrepareJson = await run(["prepare", "installed", "--task", "Fix keyboard navigation", "--file", "src/components/SearchResults.tsx", "--format", "json"], {
+    cwd: projectDir,
+    env: { HOME: prepareHome },
+  });
+  const prepareJson = JSON.parse(projectPrepareJson.stdout);
+  assert(prepareJson.bundle.selectedDisciplines.some((entry) => entry.id === "frontend-engineer"), "prepare json did not include frontend-engineer");
+  assert(prepareJson.readiness.skills.some((entry) => entry.id === "react-best-practices"), "prepare json did not include skill readiness");
+  assert(prepareJson.readiness.skills.some((entry) => entry.installCommand === "npx skills add vercel-labs/agent-skills --skill react-best-practices"), "prepare json did not include skill install command");
 
   const projectDoctor = await run(["doctor", "--project"], { cwd: projectDir });
   assert(projectDoctor.stdout.includes("OK\tdoctor"), "project doctor did not pass");
@@ -75,8 +105,8 @@ async function main() {
     disciplines: {
       ghost: {
         id: "ghost",
-        source: root,
-        sourceRoot: root,
+        source: fixtureSource,
+        sourceRoot: fixtureSource,
         sourcePath: "disciplines/frontend-engineer",
         mode: "copy",
       },
@@ -101,7 +131,7 @@ async function main() {
     version: 1,
     disciplines: [
       {
-        source: root,
+        source: fixtureSource,
         discipline: "frontend-engineer",
       },
     ],
@@ -112,7 +142,7 @@ async function main() {
   const lockfilePath = path.join(installDir, "disciplines-lock.json");
   assert(existsSync(lockfilePath), "install did not write disciplines-lock.json");
   const lockfile = JSON.parse(await readFile(lockfilePath, "utf8"));
-  assert(lockfile.disciplines.some((entry) => entry.id === "frontend-engineer" && entry.source === root), "lockfile did not record frontend-engineer");
+  assert(lockfile.disciplines.some((entry) => entry.id === "frontend-engineer" && entry.source === fixtureSource), "lockfile did not record frontend-engineer");
   const installDoctor = await run(["doctor", "--project"], { cwd: installDir });
   assert(installDoctor.stdout.includes("OK\tdisciplines.json"), "doctor did not validate disciplines.json");
   assert(installDoctor.stdout.includes("OK\tdisciplines-lock.json"), "doctor did not validate disciplines-lock.json");
@@ -126,7 +156,7 @@ async function main() {
     version: 1,
     disciplines: [
       {
-        source: root,
+        source: fixtureSource,
         discipline: "frontend-engineer",
       },
     ],
@@ -135,7 +165,7 @@ async function main() {
   assert(!existsSync(path.join(noLockDir, "disciplines-lock.json")), "install --no-lock wrote lockfile");
 
   const globalHome = await mkdtemp(path.join(os.tmpdir(), "disciplines-home-"));
-  await run(["add", root, "--discipline", "backend-engineer", "--global", "--copy", "--yes"], {
+  await run(["add", fixtureSource, "--discipline", "backend-engineer", "--global", "--copy", "--yes"], {
     env: { HOME: globalHome },
   });
   const globalList = await run(["list", "--global"], { env: { HOME: globalHome } });
@@ -168,8 +198,14 @@ async function main() {
   assert(existsSync(spacedInitialized), "init did not slugify spaced name");
   assert((await readFile(spacedInitialized, "utf8")).includes("id: software-engineer"), "init did not slugify id");
 
-  const explicitUse = await run(["use", `${root}@frontend-engineer`]);
+  const explicitUse = await run(["use", `${fixtureSource}@frontend-engineer`]);
   assert(explicitUse.stdout.includes("Selected explicitly."), "source@discipline did not select explicitly");
+
+  const explicitPrepare = await run(["prepare", `${fixtureSource}@frontend-engineer`]);
+  assert(explicitPrepare.stdout.includes("Disciplines: frontend-engineer"), "source@discipline prepare did not select explicitly");
+
+  const smoke = await run(["smoke", "--source", fixtureSource]);
+  assert(smoke.stdout.includes("smoke\tpassed"), "smoke command did not pass");
 
   console.log("CLI workflow check passed.");
 }

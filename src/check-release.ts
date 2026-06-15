@@ -10,6 +10,7 @@ const checks = [
   ["npm", ["run", "typecheck"]],
   ["npm", ["run", "validate"]],
   ["npm", ["run", "check:fixtures"]],
+  ["npm", ["run", "check:discovery"]],
   ["npm", ["run", "check:cli"]],
   ["npm", ["run", "check:package"]],
   ["npm", ["publish", "--dry-run", "--access", "public"]],
